@@ -3,6 +3,7 @@ import fs from 'fs'
 const MARCA = 'For Three Bot 🌀'
 const DB_PATH = './database/precios.json'
 const IMG_DEFAULT = 'https://raw.githubusercontent.com/bandidope/Fotos/refs/heads/master/fotos/logo.png'
+const OWNER_NUM = '51936994155' // <-- TU NUMERO
 
 let handler = async (m, { conn, command, text, isOwner, isAdmin, usedPrefix }) => {
     
@@ -26,38 +27,30 @@ let handler = async (m, { conn, command, text, isOwner, isAdmin, usedPrefix }) =
         return m.reply(`🗑️ *Lista eliminada*\n${MARCA}`)
     }
 
-    // 3. PRECIOS CON BOTONES + FALLBACK
+    // 3. PRECIOS CON BOTONES
     if (['precios', 'price', 'precio', 'lista'].includes(command)) {
         if (!fs.existsSync(DB_PATH)) {
             return m.reply(`❗ *Aún no hay precios* \n> Un admin debe usar ${usedPrefix}setprecios\n${MARCA}`)
         }
-
         try {
             const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'))
-            
             const buttons = [
                 { buttonId: '.precios_ver', buttonText: { displayText: '📦 Ver Precios' }, type: 1 },
                 { buttonId: '.owner', buttonText: { displayText: '💬 Contactar' }, type: 1 },
                 { buttonId: '.help', buttonText: { displayText: '❓ Soporte' }, type: 1 }
             ]
-
-            const buttonMessage = {
+            await conn.sendMessage(m.chat, {
                 image: { url: data.imagen },
                 caption: `*🤖 FOR THREE BOT*\n\n_Toca un botón para continuar_\n${MARCA}`,
                 footer: `Actualizado: ${data.fecha}`,
-                buttons: buttons,
-                headerType: 4
-            }
-            await conn.sendMessage(m.chat, buttonMessage, { quoted: m })
-
+                buttons: buttons, headerType: 4
+            }, { quoted: m })
         } catch (e) {
-            console.error('BOTONES ERROR:', e);
-            // FALLBACK: Si falla, manda texto normal
-            m.reply(`⚠️ *Tu WhatsApp no soporta botones. Te mando el texto:* \n\nUsa ${usedPrefix}precios_ver para ver la lista\n${MARCA}`)
+            m.reply(`⚠️ *Tu WhatsApp no soporta botones. Usa:* ${usedPrefix}precios_ver\n${MARCA}`)
         }
     }
 
-    // 4. SUB-COMANDO: Ver precios
+    // 4. VER PRECIOS
     if (command === 'precios_ver') {
         if (!fs.existsSync(DB_PATH)) return m.reply(`❗ *No hay precios*\n${MARCA}`)
         try {
@@ -65,12 +58,33 @@ let handler = async (m, { conn, command, text, isOwner, isAdmin, usedPrefix }) =
             const caption = `*📦 LISTA DE PRECIOS*\n\n${data.texto}\n\n_Actualizado: ${data.fecha}_\n${MARCA}`
             await conn.sendMessage(m.chat, { image: { url: data.imagen }, caption }, { quoted: m })
         } catch (e) {
-            m.reply(`❌ *Error cargando imagen. El link está caído*\n${MARCA}`)
+            m.reply(`❌ *Error cargando imagen*\n${MARCA}`)
         }
+    }
+
+    // 5. CONTACTAR - BOTON
+    if (command === 'owner') {
+        const vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:Owner For Three Bot\nTEL;type=CELL;type=VOICE;waid=${OWNER_NUM}:${OWNER_NUM}\nEND:VCARD`
+        await conn.sendMessage(m.chat, { 
+            contacts: { displayName: 'Owner For Three Bot', contacts: [{ vcard }] },
+            caption: `*💬 CONTACTO DIRECTO*\nEscríbeme para comprar o consultas\n${MARCA}`
+        }, { quoted: m })
+    }
+
+    // 6. SOPORTE - BOTON 
+    if (command === 'help') {
+        const helpText = `*❓ CENTRO DE SOPORTE ${MARCA}*\n
+*Comandos:*
+> ${usedPrefix}precios - Ver catálogo
+> ${usedPrefix}menu - Ver todos los comandos
+> ${usedPrefix}owner - Hablar con el Owner
+
+¿Duda? Toca Contactar 👆`
+        m.reply(helpText)
     }
 }
 
-handler.command = ['setprecios', 'setprice', 'setprecio', 'delprecios', 'borrarprecios', 'precios', 'price', 'precio', 'lista', 'precios_ver']
+handler.command = ['setprecios', 'setprice', 'setprecio', 'delprecios', 'borrarprecios', 'precios', 'price', 'precio', 'lista', 'precios_ver', 'owner', 'help']
 handler.help = ['setprecios <texto> | <img>', 'delprecios', 'precios']
 handler.tags = ['info']
 export default handler
