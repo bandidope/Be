@@ -47,8 +47,8 @@ var handler = async function (m, conn, db) {
 
     // Lista de canales
     let canalIdM = [
-        "120363414007802886@newsletter",
-        "120363414007802886@newsletter"
+        "120363419947391620@newsletter",
+        "120363419947391620@newsletter"
     ]
     let canalNombreM = [
         "For Three Bot 🌀",
@@ -121,7 +121,7 @@ var handler = async function (m, conn, db) {
                 body: '🚀 For Three',
                 previewType: "PHOTO",
                 thumbnailUrl: "https://raw.githubusercontent.com/bandidope/Fotos/refs/heads/master/fotos/logo.png",
-                sourceUrl: "https://whatsapp.com/channel/0029Vaua0ZD3gvWjQaIpSy18",
+                sourceUrl: "https://whatsapp.com/channel/0029Vb5oUp43LdQUVViHwc0m",
                 mediaType: 1,
                 renderLargerThumbnail: false
             }
