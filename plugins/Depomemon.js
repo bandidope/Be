@@ -1,11 +1,13 @@
 import fetch from 'node-fetch'
+import pkg from 'jimp'; // [FIX] Para jimp nuevo
+const { default: jimp } = pkg;
 
-const timeout = 30000 // 30 segundos
-const reward = 1000 // Coins por ganar
-const maxIntentos = 2 // [NUEVO] 2 vidas
+const timeout = 30000 
+const reward = 1000
+const maxIntentos = 2
 const sessions = new Map() 
 
-let handler = async (m, { conn, command, usedPrefix }) => {
+let handler = async (m, { conn, command }) => {
   let id = m.chat
   let user = global.db.data.users[m.sender]
   
@@ -21,11 +23,23 @@ let handler = async (m, { conn, command, usedPrefix }) => {
     
     let name = json.name
     let img = json.sprites.other['official-artwork'].front_default
-    let type = json.types.map(t => t.type.name).join(', ') // [PISTA] Tipo
+    let type = json.types.map(t => t.type.name).join(', ').toUpperCase() // [FIX] Mayusculas
+
+    // [FIX 1] Crear silueta con try/catch
+    let siluetaBuffer;
+    try {
+      let image = await jimp.read(img)
+      image.grayscale().contrast(1).brightness(-1)
+      siluetaBuffer = await image.getBufferAsync(jimp.MIME_JPEG)
+    } catch (e) {
+      console.error('Error Jimp:', e)
+      return m.reply('⚠️ Error al crear la silueta. Revisa que tengas jimp instalado: `npm i jimp`')
+    }
 
     sessions.set(id, {
       name: name,
       img: img,
+      type: type, // [GUARDAMOS EL TIPO]
       intentos: 0,
       timeout: setTimeout(() => {
         m.reply(`⏰ *Tiempo agotado!* Era *${name.toUpperCase()}*`)
@@ -34,8 +48,8 @@ let handler = async (m, { conn, command, usedPrefix }) => {
     })
 
     await conn.sendMessage(m.chat, { 
-      image: { url: img }, 
-      caption: `*¿QUIÉN ES ESE POKÉMON?* 🎮\n\nTienes *${maxIntentos} intentos* y *30s*.\n*Pista:* Tipo ${type.toUpperCase()}\n*Premio: $${reward} coins*\n\nEscribe solo el nombre en inglés.`
+      image: siluetaBuffer, 
+      caption: `*¿QUIÉN ES ESE POKÉMON?* 🎮\n\nTienes *${maxIntentos} intentos* y *30s*.\n*Pista:* Tipo ${type}\n*Premio: $${reward} coins*\n\nEscribe solo el nombre en inglés.`
     }, { quoted: m })
   }
 
@@ -49,7 +63,6 @@ let handler = async (m, { conn, command, usedPrefix }) => {
   }
 }
 
-// Handler para las respuestas
 handler.before = async (m) => {
   let id = m.chat
   if (!sessions.has(id) || !m.text || m.isBaileys) return false
@@ -63,7 +76,6 @@ handler.before = async (m) => {
     sessions.delete(id)
     
     user.money += reward
-    // [NUEVO] Manda la imagen del Pokémon adivinado
     await conn.sendMessage(m.chat, { 
       image: { url: session.img }, 
       caption: `🎉 *¡CORRECTO!*\n\nEra *${session.name.toUpperCase()}* ✅\n+ $${reward} coins`
@@ -77,7 +89,8 @@ handler.before = async (m) => {
       await m.reply(`❌ *Fallaste los ${maxIntentos} intentos!*\nEra *${session.name.toUpperCase()}*\n\nPerdiste la partida.`)
     } else {
       let quedan = maxIntentos - session.intentos
-      await m.reply(`❌ Incorrecto. Te quedan *${quedan} intento(s)*.\nPista: Tipo ${session.name}`) // Aquí solo decimos que falló
+      // [FIX 2] Aquí estaba el spoiler. Ahora usa session.type
+      await m.reply(`❌ Incorrecto. Te quedan *${quedan} intento(s)*.\n*Pista:* Tipo ${session.type}`)
     }
     return true
   }
