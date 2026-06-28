@@ -1,83 +1,89 @@
+/**
+ * 📂 COMANDO: Uchiha YouTube Downloader
+ * 📝 DESCRIPCIÓN: Extractor de audio de YouTube (MP3).
+ * 👤 CREADOR: For Three Bot 🌀
+ * ⚡ CANAL: For Three Bot 🌀
+ * Usen los código porfa para traer más 
+ * 🔗 API: https://api.delirius.store/home
+ */
+
 import fetch from "node-fetch"
-import yts from 'yt-search'
+import yts from "yt-search"
 
 const MARCA = 'For Three Bot 🌀' // <- TU MARCA
 
 const handler = async (m, { conn, text, usedPrefix, command }) => {
-    if (!text) return conn.reply(m.chat, `*Ingrese nombre o link*\n\n*Ejemplo:* ${usedPrefix}${command} Yan Block 444\n${MARCA}`, m)
+    if (!text) return conn.reply(m.chat, `⚔️ *SISTEMA UCHIHA ${MARCA}*\n\n> 🔍 *Escribe el nombre de la canción*\n> 🔗 *Ej:* ${usedPrefix + command} Yan Block 444`, m)
 
-    const isVideo = command === 'play2'
-    await m.react(isVideo? '🎥' : '🎧')
+    await m.react('🕒')
 
     try {
-        let videoUrl = text
-        let title = ''
-        let author = ''
-        let image = ''
-        let duration = ''
-
-        if (!text.match(/youtu/gi)) {
-            const search = await yts(text)
-            if (!search.all.length) {
-                await m.react('❌')
-                return m.reply(`❌ Sin resultados\n${MARCA}`)
-            }
-            videoUrl = search.videos[0].url
-            title = search.videos[0].title
-            author = search.videos[0].author.name
-            image = search.videos[0].thumbnail
-            duration = search.videos[0].timestamp
-        } else {
-            const search = await yts({videoId: text.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/))([\w-]{11})/)[1]})
-            title = search.title
-            author = search.author.name
-            image = search.thumbnail
-            duration = search.timestamp
-        }
-
-        await m.reply(`⏳ *Buscando...*\n📌 ${title}\n${MARCA}`)
-
-        const endpoint = isVideo? 'ytmp4' : 'ytmp3'
-        // API VREDEN - SI JALA 2026
-        const apiUrl = `https://api.vreden.my.id/api/${endpoint}?url=${encodeURIComponent(videoUrl)}`
-
-        const res = await fetch(apiUrl)
-        const json = await res.json()
-
-        if (json.status!== 200 ||!json.result.download.url) {
+        let search = await yts(text)
+        if (!search || !search.videos || search.videos.length === 0) {
             await m.react('❌')
-            return m.reply(`⚠️ Error API. Intenta luego\n${MARCA}`)
+            return m.reply(`*No se encontraron resultados para tu búsqueda.*\n${MARCA}`)
         }
 
-        const download = json.result.download.url
+        let videoUrl = search.videos[0].url
+        let cmd = command.toLowerCase()
+        const type = cmd === 'play2' ? 'ytmp4' : 'ytmp3'
+        
+        const b = (s) => Buffer.from(s, 'base64').toString('utf-8')
+        const endpoint = b("aHR0cHM6Ly9hcGkuZGVsaXJpdXMuc3RvcmUvZG93bmxvYWQv")
+        
+        let queryUrl = `${endpoint}${type}?url=${encodeURIComponent(videoUrl)}`
+        if (type === 'ytmp4') queryUrl += `&format=360p`
 
-        let info = `📌 *${title}*\n👤 *${author}*\n⏱️ *${duration}*\n📦 *${isVideo? 'MP4 360p' : 'MP3 128kbps'}*\n\n${MARCA}`
+        let res = await fetch(queryUrl)
+        let json = await res.json()
 
-        if (isVideo) {
-            await conn.sendMessage(m.chat, {
-                video: { url: download },
-                caption: info,
+        if (!json.status || !json.data) {
+            await m.react('❌')
+            return m.reply(`*Error al procesar la descarga con el servidor central.*\n${MARCA}`)
+        }
+
+        const yt = json.data
+        const dev = `⚡ ${MARCA}` // <- TU MARCA
+        const net = "⛩️ 𝑼𝒄𝒉𝒊𝒉𝒂 𝑩𝒐𝒕 𝑵𝒆𝒕"
+
+        let report = `| ⛩️ *𝖴𝖢𝖧𝖨𝖧𝖠 𝖯𝖫𝖠𝖸𝖤𝖱* ⛩️\n`
+        report += `|═══════════\n`
+        report += `| 💿 *𝚃𝙸𝚃𝚄𝙻𝙾:* ${yt.title}\n`
+        report += `| 👤 *𝙰𝚄𝚃𝙾𝚁:* ${yt.author}\n`
+        report += `| 📦 *𝙵𝙾𝚁𝙼𝙰𝚃𝙾:* ${yt.format.toUpperCase()}\n`
+        report += `|═══════════\n`
+        report += `| 🛠️ *${dev}*\n` // <- TU MARCA
+        report += `| ⛩️ *${net}*`
+
+        if (type === 'ytmp3') {
+            await conn.sendMessage(m.chat, { 
+                image: { url: yt.image }, 
+                caption: report 
+            }, { quoted: m })
+
+            await conn.sendMessage(m.chat, { 
+                audio: { url: yt.download }, 
+                mimetype: 'audio/mpeg',
+                fileName: `${yt.title}.mp3`
+            }, { quoted: m })
+        } else {
+            await conn.sendMessage(m.chat, { 
+                video: { url: yt.download }, 
+                caption: report,
                 mimetype: 'video/mp4'
             }, { quoted: m })
-        } else {
-            await conn.sendMessage(m.chat, { image: { url: image }, caption: info }, { quoted: m })
-            await conn.sendMessage(m.chat, {
-                audio: { url: download },
-                mimetype: 'audio/mpeg',
-                fileName: `${title}.mp3`
-            }, { quoted: m })
         }
 
-        await m.react('✅')
+        await m.react('🔥')
 
     } catch (e) {
-        console.log(e)
         await m.react('❌')
-        conn.reply(m.chat, `🛑 Error al descargar. Link muy pesado o API caída\n${MARCA}`, m)
+        m.reply(`*🛑 Error.*\n${MARCA}`) // <- TU MARCA EN ERROR
     }
 }
 
 handler.help = ['play', 'play2']
-handler.tags = ['descargas']
-handler.command = ['play', 'play2'] // play = mp3, play2 = mp4
+handler.tags = ['downloader']
+handler.command = /^(play|play2)$/i
+
 export default handler
