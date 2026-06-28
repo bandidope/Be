@@ -16,7 +16,7 @@ let handler = async (m, { conn, args, command, usedPrefix }) => {
       if (idxT!== -1) sala.titulares = null
       if (idxS!== -1) sala.suplentes = null
       await m.react('✅')
-      return conn.sendMessage(chatId, { text: `${usedPrefix}4vs4` })
+      return conn.reply(chatId, `${usedPrefix}4vs4`, m) // De usa reply
     }
 
     if (!num || num < 1 || num > 6) return m.reply(`❌ Opción inválida`)
@@ -32,7 +32,7 @@ let handler = async (m, { conn, args, command, usedPrefix }) => {
       sala.suplentes[num-5] = user
     }
     await m.react('✅')
-    return conn.sendMessage(chatId, { text: `${usedPrefix}4vs4` })
+    return conn.reply(chatId, `${usedPrefix}4vs4`, m)
   }
 
   // [COMANDO PRINCIPAL:.4vs4]
@@ -49,27 +49,21 @@ let handler = async (m, { conn, args, command, usedPrefix }) => {
       txt += sala.suplentes.map((v, i) => `│ 🐾 ${i+1}. ${v? `@${v.split('@')[0]}` : '_Vacío_'}`).join('\n') + '\n'
       txt += `╰────────────────────╯\n\n*👇 Toca el botón para apuntarte*`
 
-      // [FIX] ESTE FORMATO SÍ SALE EN TODOS LOS BAILEYS
-      await conn.sendMessage(chatId, {
-        text: txt,
-        footer: `Admin: @${sala.admin.split('@')[0]}`,
-        title: 'Sala 4vs4',
-        buttonText: '📋 Apuntarse',
-        sections: [{
-          title: "OPCIONES",
-          rows: [
-            { header: "⚡ Titular 1", title: "", description: "", id: `${usedPrefix}apuntar 1` },
-            { header: "⚡ Titular 2", title: "", description: "", id: `${usedPrefix}apuntar 2` },
-            { header: "⚡ Titular 3", title: "", description: "", id: `${usedPrefix}apuntar 3` },
-            { header: "⚡ Titular 4", title: "", description: "", id: `${usedPrefix}apuntar 4` },
-            { header: "🐾 Suplente 1", title: "", description: "", id: `${usedPrefix}apuntar 5` },
-            { header: "🐾 Suplente 2", title: "", description: "", id: `${usedPrefix}apuntar 6` },
-            { header: "🔄 Salir", title: "", description: "", id: `${usedPrefix}salir` },
-          ]
-        }],
-        mentions: [...sala.titulares,...sala.suplentes, sala.admin].filter(Boolean)
-      }, { quoted: m })
-      return
+      // [FIX DE-BANDIDO] Este es el formato que usa el bot De
+      let list = [{
+        title: '📋 APUNTARSE A LA SALA',
+        rows: [
+          { title: '⚡ Titular 1', rowId: `${usedPrefix}apuntar 1` },
+          { title: '⚡ Titular 2', rowId: `${usedPrefix}apuntar 2` },
+          { title: '⚡ Titular 3', rowId: `${usedPrefix}apuntar 3` },
+          { title: '⚡ Titular 4', rowId: `${usedPrefix}apuntar 4` },
+          { title: '🐾 Suplente 1', rowId: `${usedPrefix}apuntar 5` },
+          { title: '🐾 Suplente 2', rowId: `${usedPrefix}apuntar 6` },
+          { title: '🔄 Salir de la Sala', rowId: `${usedPrefix}salir` },
+        ]
+      }]
+
+      return conn.sendList(chatId, txt, `Admin: @${sala.admin.split('@')[0]}`, '📋 Apuntarse', list, m, { mentions: [...sala.titulares,...sala.suplentes, sala.admin].filter(Boolean) })
     }
 
     let tipo = args[0].toLowerCase()
