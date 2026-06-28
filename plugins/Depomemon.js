@@ -23,11 +23,23 @@ let handler = async (m, { conn, command }) => {
     let img = json.sprites.other['official-artwork'].front_default
     let type = json.types.map(t => t.type.name).join(', ').toUpperCase()
 
-    // [FIX] API externa que te devuelve la silueta negra
-    let siluetaUrl = `https://api.popcat.xyz/v2/pokemon?pokemon=${name}` // Popcat ya te da la silueta
-    let siluetaRes = await fetch(siluetaUrl)
-    let siluetaJson = await siluetaRes.json()
-    let siluetaBuffer = await fetch(siluetaJson.image).then(res => res.buffer()) // Esta imagen ya es negra
+    // [FIX] Crear silueta con Fallback
+    let siluetaBuffer;
+    try {
+      let siluetaUrl = `https://api.popcat.xyz/v2/pokemon?pokemon=${name}`
+      let siluetaRes = await fetch(siluetaUrl)
+      if (!siluetaRes.ok) throw new Error('Popcat down')
+      let siluetaJson = await siluetaRes.json()
+      
+      if (!siluetaJson.image) throw new Error('Image undefined') // [CLAVE] Si viene vacío, forzamos error
+      siluetaBuffer = await fetch(siluetaJson.image).then(res => res.buffer())
+    } catch (e) {
+      console.error('Error Popcat:', e)
+      // [FALLBACK] Si Popcat falla, creamos un cuadro negro con el texto
+      siluetaBuffer = await conn.resize(img, 512, 512) // Tomamos la HD
+      // Lo pintamos negro a la mala: le bajamos brillo al 100%
+      siluetaBuffer = await conn.edit(siluetaBuffer, 'brightness', -100) 
+    }
 
     sessions.set(id, {
       name: name,
