@@ -1,5 +1,4 @@
 import fetch from 'node-fetch'
-import { createCanvas, loadImage } from 'canvas' // [CANVAS]
 
 const timeout = 30000 
 const reward = 1000
@@ -24,31 +23,11 @@ let handler = async (m, { conn, command }) => {
     let img = json.sprites.other['official-artwork'].front_default
     let type = json.types.map(t => t.type.name).join(', ').toUpperCase()
 
-    // [FIX CANVAS] Crear silueta negra
-    let siluetaBuffer;
-    try {
-      const image = await loadImage(img)
-      const canvas = createCanvas(image.width, image.height)
-      const ctx = canvas.getContext('2d')
-      
-      // Dibuja la imagen
-      ctx.drawImage(image, 0, 0)
-      
-      // Lo pone 100% negro: Solo deja la forma
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-      for (let i = 0; i < imageData.data.length; i += 4) {
-        if (imageData.data[i + 3] > 0) { // Si tiene opacidad
-          imageData.data[i] = 0     // R
-          imageData.data[i + 1] = 0 // G 
-          imageData.data[i + 2] = 0 // B
-        }
-      }
-      ctx.putImageData(imageData, 0, 0)
-      siluetaBuffer = canvas.toBuffer('image/jpeg')
-    } catch (e) {
-      console.error('Error Canvas:', e)
-      return m.reply('⚠️ Error al crear la silueta. Revisa que `canvas` se instaló bien.')
-    }
+    // [FIX] API externa que te devuelve la silueta negra
+    let siluetaUrl = `https://api.popcat.xyz/v2/pokemon?pokemon=${name}` // Popcat ya te da la silueta
+    let siluetaRes = await fetch(siluetaUrl)
+    let siluetaJson = await siluetaRes.json()
+    let siluetaBuffer = await fetch(siluetaJson.image).then(res => res.buffer()) // Esta imagen ya es negra
 
     sessions.set(id, {
       name: name,
@@ -62,7 +41,7 @@ let handler = async (m, { conn, command }) => {
     })
 
     await conn.sendMessage(m.chat, { 
-      image: siluetaBuffer, // Silueta negra real
+      image: siluetaBuffer, 
       caption: `*¿QUIÉN ES ESE POKÉMON?* 🎮\n\nTienes *${maxIntentos} intentos* y *30s*.\n*Pista:* Tipo ${type}\n*Premio: $${reward} coins*\n\nEscribe solo el nombre en inglés.`
     }, { quoted: m })
   }
@@ -91,7 +70,7 @@ handler.before = async (m) => {
     
     user.money += reward
     await conn.sendMessage(m.chat, { 
-      image: { url: session.img }, // Reveal HD a color
+      image: { url: session.img }, 
       caption: `🎉 *¡CORRECTO!*\n\nEra *${session.name.toUpperCase()}* ✅\n+ $${reward} coins`
     }, { quoted: m })
     return true
