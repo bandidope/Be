@@ -41,7 +41,7 @@ let handler = async (m, { conn }) => {
   return conn.sendFile(chatId, pp, '6vs6.jpg', txt, m, false, { mentions: [m.sender] })
 }
 
-handler.help = ['6vs6 ( eeuu )']
+handler.help = ['6vs6 ( EeUu )']
 handler.tags = ['freefire']
 handler.command = /^6vs6$/i
 handler.group = true
