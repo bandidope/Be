@@ -13,31 +13,35 @@ let handler = async (m, { conn, command }) => {
   await m.react('⏳')
 
   try {
-    // 1. Descarga la imagen
+    // 1. PASO 1: Subir imagen a Evogb para obtener URL
     let media = await m.quoted.download()
-    
-    // 2. [FIX] FormData con Buffer + filename
     let form = new FormData()
-    form.append('file', media, { filename: 'image.jpg', contentType: m.quoted.mimetype })
-    form.append('format', command === 'topdf' ? 'pdf' : 'docx') 
-
-    let res = await fetch(`https://api.evogb.org/api/converter-img`, {
+    form.append('file', media, { filename: 'image.jpg' })
+    
+    let resUpload = await fetch(`https://api.evogb.org/tools/upload`, {
       method: 'POST',
-      headers: {
-        'apikey': EVOGb_KEY,
-        ...form.getHeaders() // [CLAVE] Para el boundary
-      },
+      headers: { 'apikey': EVOGb_KEY, ...form.getHeaders() },
       body: form
     })
+    let jsonUpload = await resUpload.json()
+    if (!jsonUpload.status) throw new Error(jsonUpload.message)
+    let imageUrl = jsonUpload.result.url
+    console.log('URL:', imageUrl)
 
-    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`)
+    // 2. PASO 2: Convertir usando la URL
+    let format = command === 'topdf' ? 'pdf' : 'docx'
+    let resConvert = await fetch(`https://api.evogb.org/api/converter-img?url=${encodeURIComponent(imageUrl)}&format=${format}`, {
+      headers: { 'apikey': EVOGb_KEY }
+    })
     
-    let buffer = await res.buffer()
+    if (!resConvert.ok) throw new Error(`Error ${resConvert.status}: ${await resConvert.text()}`)
     
-    let ext = command === 'topdf' ? 'pdf' : 'docx'
+    let buffer = await resConvert.buffer()
+    
+    let ext = format
     let mime = ext === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     
-    // 3. Envía el documento
+    // 3. Enviar el documento
     await conn.sendMessage(m.chat, {
       document: buffer,
       fileName: `convertido.${ext}`,
@@ -50,7 +54,7 @@ let handler = async (m, { conn, command }) => {
   } catch (e) {
     console.log(e)
     await m.react('❌')
-    m.reply(`❌ Error al convertir: ${e.message}`)
+    m.reply(`❌ Error: ${e.message}`)
   }
 }
 
