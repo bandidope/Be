@@ -23,22 +23,17 @@ let handler = async (m, { conn, command }) => {
     let img = json.sprites.other['official-artwork'].front_default
     let type = json.types.map(t => t.type.name).join(', ').toUpperCase()
 
-    // [FIX] Crear silueta con Fallback
+    // [FIX DEFINITIVO] Usamos una API que te da la silueta directo
     let siluetaBuffer;
     try {
-      let siluetaUrl = `https://api.popcat.xyz/v2/pokemon?pokemon=${name}`
-      let siluetaRes = await fetch(siluetaUrl)
-      if (!siluetaRes.ok) throw new Error('Popcat down')
-      let siluetaJson = await siluetaRes.json()
-      
-      if (!siluetaJson.image) throw new Error('Image undefined') // [CLAVE] Si viene vacío, forzamos error
-      siluetaBuffer = await fetch(siluetaJson.image).then(res => res.buffer())
+      // Esta API convierte cualquier imagen a silueta negra
+      let apiUrl = `https://api.dorratz.com/pokesilhouette?url=${encodeURIComponent(img)}`
+      let siluetaRes = await fetch(apiUrl)
+      if (!siluetaRes.ok) throw new Error('API Silueta down')
+      siluetaBuffer = await siluetaRes.buffer() // Ya viene en negro
     } catch (e) {
-      console.error('Error Popcat:', e)
-      // [FALLBACK] Si Popcat falla, creamos un cuadro negro con el texto
-      siluetaBuffer = await conn.resize(img, 512, 512) // Tomamos la HD
-      // Lo pintamos negro a la mala: le bajamos brillo al 100%
-      siluetaBuffer = await conn.edit(siluetaBuffer, 'brightness', -100) 
+      console.error('Error API Silueta:', e)
+      return m.reply('⚠️ Error al crear la silueta. Intenta de nuevo con .pokedex')
     }
 
     sessions.set(id, {
