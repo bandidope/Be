@@ -1,3 +1,5 @@
+import { generateWAMessageFromContent, proto } from '@whiskeysockets/baileys'
+
 let salas = global.salas4vs4 = global.salas4vs4 || {}
 
 let handler = async (m, { conn, args, command, usedPrefix }) => {
@@ -13,8 +15,8 @@ let handler = async (m, { conn, args, command, usedPrefix }) => {
     if (command === 'salir') {
       let idxT = sala.titulares.indexOf(user)
       let idxS = sala.suplentes.indexOf(user)
-      if (idxT!== -1) sala.titulares[idxT] = null
-      if (idxS!== -1) sala.suplentes[idxS] = null
+      if (idxT!== -1) sala.titulares = null
+      if (idxS!== -1) sala.suplentes = null
       await m.react('✅')
       return conn.sendMessage(chatId, { text: `${usedPrefix}4vs4` })
     }
@@ -49,28 +51,34 @@ let handler = async (m, { conn, args, command, usedPrefix }) => {
       txt += sala.suplentes.map((v, i) => `│ 🐾 ${i+1}. ${v? `@${v.split('@')[0]}` : '_Vacío_'}`).join('\n') + '\n'
       txt += `╰────────────────────╯\n\n*👇 Toca el botón para apuntarte*`
 
-      // [FIX] 1 SOLO MENSAJE CON LISTA
-      const sections = [{
-        title: "APUNTARSE",
-        rows: [
-          { title: "⚡ Titular 1", rowId: `${usedPrefix}apuntar 1` },
-          { title: "⚡ Titular 2", rowId: `${usedPrefix}apuntar 2` },
-          { title: "⚡ Titular 3", rowId: `${usedPrefix}apuntar 3` },
-          { title: "⚡ Titular 4", rowId: `${usedPrefix}apuntar 4` },
-          { title: "🐾 Suplente 1", rowId: `${usedPrefix}apuntar 5` },
-          { title: "🐾 Suplente 2", rowId: `${usedPrefix}apuntar 6` },
-          { title: "🔄 Salir", rowId: `${usedPrefix}salir` },
-        ]
-      }]
-
-      await conn.sendListM(chatId, {
+      // [FIX] LISTMESSAGE NATIVO BAILEYS
+      const listMessage = {
+        title: 'Sala 4vs4',
         text: txt,
         footer: `Admin: @${sala.admin.split('@')[0]}`,
-        title: 'Sala 4vs4',
         buttonText: '📋 Apuntarse',
-        sections,
+        sections: [
+          { 
+            title: "APUNTARSE", 
+            rows: [
+              { title: "⚡ Titular 1", description: "Slot 1", id: `${usedPrefix}apuntar 1` },
+              { title: "⚡ Titular 2", description: "Slot 2", id: `${usedPrefix}apuntar 2` },
+              { title: "⚡ Titular 3", description: "Slot 3", id: `${usedPrefix}apuntar 3` },
+              { title: "⚡ Titular 4", description: "Slot 4", id: `${usedPrefix}apuntar 4` },
+              { title: "🐾 Suplente 1", description: "Slot 5", id: `${usedPrefix}apuntar 5` },
+              { title: "🐾 Suplente 2", description: "Slot 6", id: `${usedPrefix}apuntar 6` },
+              { title: "🔄 Salir", description: "Salirse de la sala", id: `${usedPrefix}salir` },
+            ]
+          }
+        ],
         mentions: [...sala.titulares,...sala.suplentes, sala.admin].filter(Boolean)
+      }
+
+      const msg = generateWAMessageFromContent(m.chat, {
+        listMessage
       }, { quoted: m })
+
+      await conn.relayMessage(m.chat, msg.message, { messageId: msg.key.id })
       return
     }
 
