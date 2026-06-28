@@ -57,9 +57,9 @@ const handler = async (m, { conn, usedPrefix }) => {
     menu += `𓈒𓏸🌴 *Bot Name:* For Three Bot 🇵🇪\n`;
     menu += `𓈒𓏸🌵 *Nivel:* ${level} | *Exp:* ${exp - min}/${xp}\n`;
     menu += `𓈒𓏸🌵 *Activo:* ${uptime}\n`;
-    menu += `𓈒𓏸🌵 *Comprar:*.comprar\n`;
+    menu += `𓈒𓏸🌵 *Comprar:*.precios\n`;
     menu += `𓈒𓏸🍃 *Usuarios:* ${totalreg}\n\n`;
-    menu += `> 😸 Si encuentra un comando con errores no dudes en reportarlo con el Creador\n`;
+    menu += `> 😸 Si encuentra un comando con errores no dudes en reportarlo con el Creador\n\n`;
 
     // 4. ORDENAR CATEGORIAS
     const categoriasOrdenadas = []
