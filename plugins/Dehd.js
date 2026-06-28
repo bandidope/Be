@@ -10,6 +10,8 @@ let handler = async (m, { conn, args }) => {
 
   let modoFull = args[0] === 'full' //.ehd full = sin compresión
 
+  // [NUEVO] Mensaje de procesando
+  let proses = await conn.sendMessage(m.chat, { text: '⏳ *Un momento, estoy procesando la imagen...*' }, { quoted: m })
   await conn.sendMessage(m.chat, { react: { text: '✨', key: m.key } })
 
   try {
@@ -22,13 +24,11 @@ let handler = async (m, { conn, args }) => {
     let buffer, caption, filename
 
     if(modoFull){
-      // MODO FULL: 100% calidad, 4MB-8MB
       buffer = await img.quality(100).getBufferAsync(jimp.MIME_JPEG)
       filename = `EHD_${w*4}x${h*4}_FULL.jpg`
       caption = `*ENHANCE HD x4 FULL* ✅\n${w}x${h} -> ${w*4}x${h*4}px\nPeso: ${(buffer.length/1024/1024).toFixed(2)}MB\n» 0 Compresión WA`
     } else {
-      // MODO LITE: Auto <1MB
-      let targetSize = 950 * 1024 // 950KB
+      let targetSize = 950 * 1024
       let quality = 85
       buffer = await img.quality(quality).getBufferAsync(jimp.MIME_JPEG)
 
@@ -40,7 +40,10 @@ let handler = async (m, { conn, args }) => {
       caption = `*ENHANCE HD x4 LITE* ✅\n${w}x${h} -> ${w*4}x${h*4}px\nPeso: ${(buffer.length/1024/1024).toFixed(2)}MB\nCalidad: ${quality}%`
     }
 
-    // CLAVE: Se envía como Documento para que WA no lo comprima
+    // Borra el mensaje de "procesando..."
+    await conn.sendMessage(m.chat, { delete: proses.key })
+
+    // Manda el resultado como Documento
     await conn.sendMessage(m.chat, {
       document: buffer,
       mimetype: 'image/jpeg',
@@ -52,6 +55,8 @@ let handler = async (m, { conn, args }) => {
 
   } catch(e) {
     console.log(e)
+    // Si falla, también borra el "procesando"
+    await conn.sendMessage(m.chat, { delete: proses.key })
     m.reply('⚠️ Falló. Formato no soportado.')
   }
 }
