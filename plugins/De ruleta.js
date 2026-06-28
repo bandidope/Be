@@ -3,6 +3,17 @@ let ruletaDB = global.db.data.ruleta || (global.db.data.ruleta = {})
 const Emojis = ['🟥', '🟦', '🟩', '🟨', '🟪', '🟧', '🟫', '⬛']
 const MARCA = 'For Three Bot 🌀' // <- TU MARCA
 
+// Función para separar por espacios, pero respetando "comillas"
+const parseArgs = (texto) => {
+    const regex = /"([^"]+)"|(\S+)/g;
+    let match;
+    let nombres = [];
+    while ((match = regex.exec(texto))!== null) {
+        nombres.push(match[1] || match[2]);
+    }
+    return [...new Set(nombres.filter(v => v))];
+}
+
 let handler = async (m, { conn, args, command, isAdmin }) => {
     if (!isAdmin) throw `❌ *Solo administradores del grupo*\n${MARCA}`
 
@@ -13,8 +24,9 @@ let handler = async (m, { conn, args, command, isAdmin }) => {
 
     switch (command) {
         case 'addrl': {
-            if (!texto) throw `ꕤ *Uso:* #addrl Nombre1 / Nombre2 / Nombre3\n${MARCA}`
-            let nombres = [...new Set(texto.split('/').map(v => v.trim()).filter(v => v))]
+            if (!texto) throw `ꕤ *Uso:*.addrl Nombre2 "Nombre Con Espacios"\n${MARCA}`
+
+            let nombres = parseArgs(texto) // <- NUEVO PARSER
             let agregados = []
             for (let name of nombres) {
                 if (!ruletaDB[chatId].some(v => v.toLowerCase() === name.toLowerCase())) {
@@ -29,7 +41,7 @@ let handler = async (m, { conn, args, command, isAdmin }) => {
         break
 
         case 'delusrl': {
-            if (!texto) throw `ꕤ *Uso:* #delusrl Nombre\n${MARCA}`
+            if (!texto) throw `ꕤ *Uso:*.delusrl Nombre o "Nombre Con Espacios"\n${MARCA}`
             let antes = ruletaDB[chatId].length
             ruletaDB[chatId] = ruletaDB[chatId].filter(v => v.toLowerCase()!== texto.toLowerCase())
             if (ruletaDB[chatId].length === antes) throw `⚠️ ${texto} no está en la ruleta\n${MARCA}`
