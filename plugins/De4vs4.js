@@ -1,26 +1,40 @@
 let handler = async (m, { conn }) => {
   let chatId = m.chat
+  
+  // [FECHA PERÚ] Lunes a Domingo
+  let now = new Date().toLocaleString('es-PE', { 
+    timeZone: 'America/Lima',
+    weekday: 'long',
+    day: '2-digit', 
+    month: '2-digit'
+  })
+  now = now.charAt(0).toUpperCase() + now.slice(1)
+  
+  // [HORAS PE/BO/CL/AR] FORMATO 12H AM/PM
+  let horaPE = new Date().toLocaleString('es-PE', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', hour12: true })
+  let horaBO = new Date().toLocaleString('es-BO', { timeZone: 'America/La_Paz', hour: '2-digit', minute: '2-digit', hour12: true })
+  let horaCL = new Date().toLocaleString('es-CL', { timeZone: 'America/Santiago', hour: '2-digit', minute: '2-digit', hour12: true })
+  let horaAR = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', minute: '2-digit', hour12: true })
 
-  let txt = `╭───〔 🔥 4 VS 4 〕───╮
-│
-│ *VS:* 
-│ *🕚 Hora:* 
-│ *👑 Admin:* @${m.sender.split('@')[0]}
-│ *📜 Reglas:* 
-│
-├─ *TITULARES* [0/4]
-│ ⚡ 1. _Vacío_
-│ ⚡ 2. _Vacío_
-│ ⚡ 3. _Vacío_
-│ ⚡ 4. _Vacío_
-│
-├─ *SUPLENTES* [0/2]
-│ 🐾 1. _Vacío_
-│ 🐾 2. _Vacío_
-╰────────────────────╯`
+  let txt = `*Actividad ${now}*
+╰› _4 VS 4 (S/R)_ ⋆🐾° 
+⊹ ࣪ ˖ ${horaPE}🇵🇪 ${horaBO}🇧🇴 ${horaCL}🇨🇱 ${horaAR}🇦🇷
+🫆 𝖠𝖽𝗆𝗂𝗇: @${m.sender.split('@')[0]}
+𝖢𝖺𝗌𝗂𝗅𝖺: 
+𝖢𝗈𝗅𝗈𝗋: 
+
+𓍼 ׅ ⬞ ִ ᥱsᥴᥙᥲძrᥲ 𝗍і𝗍ᥙᥣᥲr
+💙𑁤 
+💙𑁤 
+💙𑁤 
+💙𑁤  
+
+𓍼 ׅ ⬞ ִ sᥙ⍴ᥣᥱᥒ𝗍ᥱs
+🪼𑁤 
+🪼𑁤 `
 
   // [FOTO DEL GRUPO]
-  let pp = await conn.profilePictureUrl(chatId, 'image').catch(_ => 'https://i.ibb.co/K0Wr1XJ/ff-logo.jpg') // Logo Free Fire por defecto
+  let pp = await conn.profilePictureUrl(chatId, 'image').catch(_ => 'https://i.ibb.co/K0Wr1XJ/ff-logo.jpg')
   
   return conn.sendFile(chatId, pp, 'vs4.jpg', txt, m, false, { mentions: [m.sender] })
 }
