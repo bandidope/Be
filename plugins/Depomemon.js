@@ -1,6 +1,5 @@
 import fetch from 'node-fetch'
-import pkg from 'jimp'; // [FIX] Para jimp nuevo
-const { default: jimp } = pkg;
+import { createCanvas, loadImage } from 'canvas' // [CANVAS]
 
 const timeout = 30000 
 const reward = 1000
@@ -23,23 +22,38 @@ let handler = async (m, { conn, command }) => {
     
     let name = json.name
     let img = json.sprites.other['official-artwork'].front_default
-    let type = json.types.map(t => t.type.name).join(', ').toUpperCase() // [FIX] Mayusculas
+    let type = json.types.map(t => t.type.name).join(', ').toUpperCase()
 
-    // [FIX 1] Crear silueta con try/catch
+    // [FIX CANVAS] Crear silueta negra
     let siluetaBuffer;
     try {
-      let image = await jimp.read(img)
-      image.grayscale().contrast(1).brightness(-1)
-      siluetaBuffer = await image.getBufferAsync(jimp.MIME_JPEG)
+      const image = await loadImage(img)
+      const canvas = createCanvas(image.width, image.height)
+      const ctx = canvas.getContext('2d')
+      
+      // Dibuja la imagen
+      ctx.drawImage(image, 0, 0)
+      
+      // Lo pone 100% negro: Solo deja la forma
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      for (let i = 0; i < imageData.data.length; i += 4) {
+        if (imageData.data[i + 3] > 0) { // Si tiene opacidad
+          imageData.data[i] = 0     // R
+          imageData.data[i + 1] = 0 // G 
+          imageData.data[i + 2] = 0 // B
+        }
+      }
+      ctx.putImageData(imageData, 0, 0)
+      siluetaBuffer = canvas.toBuffer('image/jpeg')
     } catch (e) {
-      console.error('Error Jimp:', e)
-      return m.reply('⚠️ Error al crear la silueta. Revisa que tengas jimp instalado: `npm i jimp`')
+      console.error('Error Canvas:', e)
+      return m.reply('⚠️ Error al crear la silueta. Revisa que `canvas` se instaló bien.')
     }
 
     sessions.set(id, {
       name: name,
       img: img,
-      type: type, // [GUARDAMOS EL TIPO]
+      type: type,
       intentos: 0,
       timeout: setTimeout(() => {
         m.reply(`⏰ *Tiempo agotado!* Era *${name.toUpperCase()}*`)
@@ -48,7 +62,7 @@ let handler = async (m, { conn, command }) => {
     })
 
     await conn.sendMessage(m.chat, { 
-      image: siluetaBuffer, 
+      image: siluetaBuffer, // Silueta negra real
       caption: `*¿QUIÉN ES ESE POKÉMON?* 🎮\n\nTienes *${maxIntentos} intentos* y *30s*.\n*Pista:* Tipo ${type}\n*Premio: $${reward} coins*\n\nEscribe solo el nombre en inglés.`
     }, { quoted: m })
   }
@@ -77,7 +91,7 @@ handler.before = async (m) => {
     
     user.money += reward
     await conn.sendMessage(m.chat, { 
-      image: { url: session.img }, 
+      image: { url: session.img }, // Reveal HD a color
       caption: `🎉 *¡CORRECTO!*\n\nEra *${session.name.toUpperCase()}* ✅\n+ $${reward} coins`
     }, { quoted: m })
     return true
@@ -89,7 +103,6 @@ handler.before = async (m) => {
       await m.reply(`❌ *Fallaste los ${maxIntentos} intentos!*\nEra *${session.name.toUpperCase()}*\n\nPerdiste la partida.`)
     } else {
       let quedan = maxIntentos - session.intentos
-      // [FIX 2] Aquí estaba el spoiler. Ahora usa session.type
       await m.reply(`❌ Incorrecto. Te quedan *${quedan} intento(s)*.\n*Pista:* Tipo ${session.type}`)
     }
     return true
