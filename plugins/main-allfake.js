@@ -30,7 +30,7 @@ var handler = async function (m, conn, db) {
 
     // Obtener información del usuario
     let who = m.mentionedJid && m.mentionedJid[0] ? m.mentionedJid[0] : m.fromMe ? conn.user.jid : m.sender
-    let fotoperfil = await conn.profilePictureUrl(who, 'image').catch(() => 'https://qu.ax/QGAVS.jpg')
+    let fotoperfil = await conn.profilePictureUrl(who, 'image').catch(() => 'https://raw.githubusercontent.com/bandidope/Fotos/refs/heads/master/fotos/logo.png')
 
     // Obtener nacionalidad
     let api = await axios.get(`https://deliriussapi-oficial.vercel.app/tools/country?text=${PhoneNumber('+' + who.replace('@s.whatsapp.net', '')).getNumber('international')}`)
@@ -41,9 +41,9 @@ var handler = async function (m, conn, db) {
     let pushname = m.pushName || 'Sin nombre'
 
     // Datos generales del bot
-    let creador = 'Wa.me/56966352834'
+    let creador = 'Wa.me/51936994155'
     let ofcbot = conn.user.jid.split('@')[0]
-    let asistencia = 'Wa.me/56966352834'
+    let asistencia = 'Wa.me/51936994155'
 
     // Lista de canales
     let canalIdM = [
@@ -51,8 +51,8 @@ var handler = async function (m, conn, db) {
         "120363414007802886@newsletter"
     ]
     let canalNombreM = [
-        "sá¥²sá¥™ká¥± á‘²á¥†ð— máƒ« ðŸŒ€",
-        "âœ§â”Šâ”‹â—ŸðŸš€sá¥²sá¥™ká¥± á‘²á¥†ð—ðŸš€â—žâ”Šâ”‹âœ§"
+        "For Three Bot 🌀",
+        "Mejor Bot De WhatsApp 🌀"
     ]
 
     async function getRandomChannel() {
@@ -118,9 +118,9 @@ var handler = async function (m, conn, db) {
             externalAdReply: {
                 showAdAttribution: true,
                 title: "Texto del bot",
-                body: '🚀 ♡↝𝙏𝙝𝙚 𝙆𝙞𝙣𝙜'𝙨 𝘽𝙤𝙩 👾',
+                body: '🚀 For Three',
                 previewType: "PHOTO",
-                thumbnailUrl: "https://qu.ax/QGAVS.jpg",
+                thumbnailUrl: "https://raw.githubusercontent.com/bandidope/Fotos/refs/heads/master/fotos/logo.png",
                 sourceUrl: "https://whatsapp.com/channel/0029Vaua0ZD3gvWjQaIpSy18",
                 mediaType: 1,
                 renderLargerThumbnail: false
