@@ -18,14 +18,14 @@ handler.before = async function (m, { conn, participants, groupMetadata}) {
 },
         message: {
             locationMessage: {
-                name: "𝙏𝙝𝙚 𝙆𝙞𝙣𝙜'𝙨 𝘽𝙤𝙩 👾",
+                name: "*For Three Bot*",
                 jpegThumbnail: await (await fetch('https://files.catbox.moe/1j784p.jpg')).buffer(),
                 vcard:
                     "BEGIN:VCARD\n" +
                     "VERSION:3.0\n" +
-                    "N:;The King's Bot;;;\n" +
-                    "FN:The King's Bot\n" +
-                    "ORG: Benja Developers\n" +
+                    "N:;For Three;;;\n" +
+                    "FN:For Three Bot\n" +
+                    "ORG: Whois Developers\n" +
                     "TITLE:\n" +
                     "item1.TEL;waid=19709001746:+1 (970) 900-1746\n" +
                     "item1.X-ABLabel:King\n" +
