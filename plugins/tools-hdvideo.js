@@ -1,17 +1,23 @@
-import axios from "axios";
 import fs from "fs";
 import path from "path";
-import FormData from "form-data";
 import { randomBytes } from "crypto";
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
+import { exec } from "child_process";
+import { promisify } from "util";
+const execAsync = promisify(exec);
 
 const MARCA = 'For Three Bot 🌀'
 const TEMP_DIR = './temp'
-const MAX_SIZE = 100 * 1024 * 1024
-const API_URL = "http://api.drizznesiasite.biz.id:4167/hdvideo"
-const MAX_RETRIES = 3 // <- 3 intentos
+const MAX_SIZE = 100 * 1024 * 1024 // 100MB
 
 let handler = async (m, { conn, text, command, usedPrefix }) => {
+  // 1. Verificar que ffmpeg exista
+  try {
+    await execAsync('ffmpeg -version')
+  } catch {
+    return m.reply(`❌ *ffmpeg no está instalado* \n> Instálalo con: pkg install ffmpeg\n${MARCA}`)
+  }
+
   if (!m.quoted ||!/video|document/.test(m.quoted.mimetype || '')) {
     return m.reply(`❗ *Reply al video* que quieres convertir a HD\n${MARCA}`);
   }
@@ -26,7 +32,7 @@ let handler = async (m, { conn, text, command, usedPrefix }) => {
   const resolutions = { "480": "480", "720": "720", "1080": "1080", "2k": "1440", "4k": "2160", "8k": "4320" };
   if (!resolutions[res]) return m.reply(`*Ejemplo:* ${usedPrefix + command} 720\n${MARCA}`);
 
-  const targetHeight = resolutions[res];
+  const height = resolutions[res];
   const uniqueId = `${m.sender.split("@")[0]}_${Date.now()}_${randomBytes(4).toString('hex')}`
   if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 
@@ -44,64 +50,24 @@ let handler = async (m, { conn, text, command, usedPrefix }) => {
     if (buffer.length > MAX_SIZE) return m.reply(`❗ *Video muy pesado.* Máximo 100MB\n${MARCA}`);
     fs.writeFileSync(inputFile, buffer);
 
-    m.reply(`⏳ *Procesando a ${res.toUpperCase()} ${fps}FPS...*`);
+    m.reply(`⏳ *Renderizando a ${res.toUpperCase()} ${fps}FPS... Puede tardar 1-3 min*`);
 
-    const form = new FormData();
-    form.append("video", fs.createReadStream(inputFile));
-    form.append("resolution", targetHeight);
-    form.append("fps", fps);
+    // Comando ffmpeg: upscale + fps + nitidez
+    const cmd = `ffmpeg -y -i "${inputFile}" -vf "scale=-2:${height}:flags=lanczos,unsharp=5:5:1.0" -r ${fps} -c:v libx264 -preset veryfast -crf 18 -c:a copy "${outputFile}"`;
 
-    // Bucle de reintentos
-    let response;
-    let lastError;
-    for (let i = 1; i <= MAX_RETRIES; i++) {
-      try {
-        response = await axios.post(API_URL, form, {
-          headers: form.getHeaders(),
-          responseType: "stream",
-          timeout: 300000,
-          maxBodyLength: Infinity,
-          maxContentLength: Infinity,
-          validateStatus: s => s >= 200 && s < 300
-        });
-        break; // Si llega aquí, salió bien y rompe el bucle
-      } catch (err) {
-        lastError = err;
-        console.error(`HDVIDEO INTENTO ${i}/${MAX_RETRIES} FALLÓ:`, err.code || err.message);
-        if (i < MAX_RETRIES) {
-          await new Promise(r => setTimeout(r, i * 2000)) // Espera 2s, 4s...
-        }
-      }
-    }
+    await execAsync(cmd, { timeout: 300000 }); // 5 min timeout
 
-    if (!response) throw lastError; // Si fallaron los 3, tira el último error
-
-    const writer = fs.createWriteStream(outputFile);
-    response.data.pipe(writer);
-    await new Promise((resolve, reject) => {
-      writer.on("finish", resolve);
-      writer.on("error", reject);
-    });
+    if (!fs.existsSync(outputFile)) throw new Error('ffmpeg no generó el archivo');
 
     const finalBuffer = fs.readFileSync(outputFile);
-    await conn.sendMessage(m.chat, { video: finalBuffer, caption: `✅ *Video a ${res.toUpperCase()} ${fps}FPS*\n${MARCA}` }, { quoted: m });
+    await conn.sendMessage(m.chat, {
+      video: finalBuffer,
+      caption: `✅ *Video renderizado a ${res.toUpperCase()} ${fps}FPS*\n> HD Local sin API\n${MARCA}`
+    }, { quoted: m });
 
   } catch (err) {
-    console.error('HDVIDEO ERROR FINAL:', err.message);
-
-    // Mensaje bonito según el error
-    let errorMsg = `❌ *Error al procesar el video*`;
-    if (err.code === 'EAI_AGAIN' || err.code === 'ENOTFOUND') {
-      errorMsg = `❌ *API HD caída* \n> El servidor no responde. Intenta en unos minutos.\n${MARCA}`;
-    } else if (err.code === 'ECONNABORTED') {
-      errorMsg = `❌ *Timeout* \n> La API tardó demasiado. Intenta con un video más corto.\n${MARCA}`;
-    } else if (err.response?.status) {
-      errorMsg = `❌ *Error API:* ${err.response.status}\n${MARCA}`;
-    } else {
-      errorMsg = `❌ *Error:* ${err.message}\n${MARCA}`;
-    }
-    m.reply(errorMsg);
-
+    console.error('HDVIDEO FFMPEG ERROR:', err.message);
+    m.reply(`❌ *Error en ffmpeg:* ${err.message.includes('timeout')? 'Tardó demasiado' : 'Fallo el render'}\n${MARCA}`);
   } finally {
     try { if (fs.existsSync(inputFile)) fs.unlinkSync(inputFile) } catch {}
     try { if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile) } catch {}
