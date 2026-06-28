@@ -19,7 +19,7 @@ const imgMenu = 'https://raw.githubusercontent.com/bandidope/Fotos/refs/heads/ma
 
 // 1. AQUI PONES TU ORDEN - EL NOMBRE ES EL TAG DEL PLUGIN
 const ORDEN_CATEGORIAS = [
-  'main', // 1ro
+  'freefire', // 1ro
   'info', // 2do
   'audio', // 3ro
   'descargas', // 4to
