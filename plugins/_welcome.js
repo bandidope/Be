@@ -1,21 +1,15 @@
-import { WAMessageStubType} from '@whiskeysockets/baileys';
+import { WAMessageStubType } from '@whiskeysockets/baileys';
 import fetch from 'node-fetch';
 
-export async function before(m, { conn, groupMetadata}) {
+export async function before(m, { conn, groupMetadata }) {
   try {
     if (!m.messageStubType ||!m.isGroup) return true;
 
     const chat = global.db?.data?.chats?.[m.chat];
     if (!chat ||!chat.bienvenida) return true;
 
-    // --- ✅ Enlace de imagen solicitado por el usuario ---
-    const defaultImageUrl = 'https://qu.ax/Ny958'; 
-
-    // Función para obtener la imagen como buffer
-    const get_default_image_buffer = async () => {
-        return await fetch(defaultImageUrl).then(res => res.buffer());
-    };
-    // ----------------------------------------
+    // Imagen por defecto si el user no tiene foto
+    const defaultImageUrl = 'https://qu.ax/Ny958';
 
     const fkontak = {
       key: {
@@ -23,16 +17,16 @@ export async function before(m, { conn, groupMetadata}) {
         remoteJid: 'status@broadcast',
         fromMe: false,
         id: 'Halo'
-},
+      },
       message: {
         contactMessage: {
           vcard: `BEGIN:VCARD\nVERSION:3.0\nN:Sy;Bot;;;\nFN:y\nitem1.TEL;waid=${
             conn.user.jid.split('@')[0]
-}:${conn.user.jid.split('@')[0]}\nitem1.X-ABLabel:Ponsel\nEND:VCARD`
-}
-},
+          }:${conn.user.jid.split('@')[0]}\nitem1.X-ABLabel:Ponsel\nEND:VCARD`
+        }
+      },
       participant: '0@s.whatsapp.net'
-};
+    };
 
     let userJid;
     switch (m.messageStubType) {
@@ -45,56 +39,61 @@ export async function before(m, { conn, groupMetadata}) {
         break;
       default:
         return true;
-}
+    }
 
     if (!userJid) return true;
+
+    // *** NUEVO: Agarrar la foto del que entra/sale ***
+    let ppUser;
+    try {
+      ppUser = await conn.profilePictureUrl(userJid, 'image');
+    } catch {
+      ppUser = defaultImageUrl; // Si no tiene foto, usa la tuya
+    }
+    const imgBuffer = await fetch(ppUser).then(res => res.buffer());
+    // *************************************************
 
     const user = `@${userJid.split('@')[0]}`;
     const groupName = groupMetadata.subject;
     const groupDesc = groupMetadata.desc || '📜 Sin descripción disponible';
-
-    // *** Obtener el buffer de la imagen solicitada para todos los casos ***
-    const imgBuffer = await get_default_image_buffer();
-    // *************************************************************************
-
-    const { customWelcome, customBye, customKick} = chat;
+    const { customWelcome, customBye, customKick } = chat;
 
     if (m.messageStubType === WAMessageStubType.GROUP_PARTICIPANT_ADD) {
       const welcomeText = customWelcome
-? customWelcome.replace(/@user/gi, user).replace(/@group/gi, groupName).replace(/@desc/gi, groupDesc)
-: `🎅 *¡HO HO HOLA ${user}!* 🔔\n\n¡Bienvenido/a a *${groupName}*! Que la **magia de la Navidad** te acompañe.\n\n📚 *Sobre nosotros:*\n_${groupDesc}_\n\n🌟 ¡Felices fiestas!`;
+       ? customWelcome.replace(/@user/gi, user).replace(/@group/gi, groupName).replace(/@desc/gi, groupDesc)
+        : `👋 *¡Bienvenido ${user}!*\n\n¡Ya estás en *${groupName}*!\n\n📜 *Sobre el grupo:*\n_${groupDesc}_\n\n*Pasa piola y lee las reglas 😎*`;
 
       await conn.sendMessage(m.chat, {
-        image: imgBuffer,
+        image: imgBuffer, // <- Ahora es su foto
         caption: welcomeText,
         mentions: [userJid]
-}, { quoted: fkontak});
-}
+      }, { quoted: fkontak });
+    }
 
     if (m.messageStubType === WAMessageStubType.GROUP_PARTICIPANT_LEAVE) {
       const goodbyeText = customBye
-? customBye.replace(/@user/gi, user).replace(/@group/gi, groupName)
-: `😭 *¡El Grinch se ha ido!* ☃️\n\nGracias por compartir la Navidad en *${groupName}*. ¡Vuelve pronto, ${user}!`;
+       ? customBye.replace(/@user/gi, user).replace(/@group/gi, groupName)
+        : `😭 *Se fue ${user}* \n\nGracias por estar en *${groupName}*. ¡Vuelve pronto!`;
 
       await conn.sendMessage(m.chat, {
-        image: imgBuffer,
+        image: imgBuffer, // <- Su foto
         caption: goodbyeText,
         mentions: [userJid]
-}, { quoted: fkontak});
-}
+      }, { quoted: fkontak });
+    }
 
     if (m.messageStubType === WAMessageStubType.GROUP_PARTICIPANT_REMOVE) {
       const kickText = customKick
-? customKick.replace(/@user/gi, user).replace(/@group/gi, groupName)
-: `❌ *¡Elfo travieso expulsado!* 🧝🏻‍♂️\n\n*${user}* ha sido enviado de vuelta al Polo Norte. ¡Feliz Navidad!`;
+       ? customKick.replace(/@user/gi, user).replace(/@group/gi, groupName)
+        : `❌ *${user} fue expulsado de ${groupName}*`;
 
       await conn.sendMessage(m.chat, {
-        image: imgBuffer,
+        image: imgBuffer, // <- Su foto
         caption: kickText,
         mentions: [userJid]
-}, { quoted: fkontak});
-}
-} catch (error) {
-    console.error('❌ Error general en la función de bienvenida/despedida/expulsión:', error);
-}
+      }, { quoted: fkontak });
+    }
+  } catch (error) {
+    console.error('❌ Error en welcome:', error);
+  }
 }
