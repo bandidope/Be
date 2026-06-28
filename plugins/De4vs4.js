@@ -1,5 +1,3 @@
-import { generateWAMessageFromContent, proto } from '@whiskeysockets/baileys'
-
 let salas = global.salas4vs4 = global.salas4vs4 || {}
 
 let handler = async (m, { conn, args, command, usedPrefix }) => {
@@ -51,34 +49,26 @@ let handler = async (m, { conn, args, command, usedPrefix }) => {
       txt += sala.suplentes.map((v, i) => `│ 🐾 ${i+1}. ${v? `@${v.split('@')[0]}` : '_Vacío_'}`).join('\n') + '\n'
       txt += `╰────────────────────╯\n\n*👇 Toca el botón para apuntarte*`
 
-      // [FIX] LISTMESSAGE NATIVO BAILEYS
-      const listMessage = {
-        title: 'Sala 4vs4',
+      // [FIX] ESTE FORMATO SÍ SALE EN TODOS LOS BAILEYS
+      await conn.sendMessage(chatId, {
         text: txt,
         footer: `Admin: @${sala.admin.split('@')[0]}`,
+        title: 'Sala 4vs4',
         buttonText: '📋 Apuntarse',
-        sections: [
-          { 
-            title: "APUNTARSE", 
-            rows: [
-              { title: "⚡ Titular 1", description: "Slot 1", id: `${usedPrefix}apuntar 1` },
-              { title: "⚡ Titular 2", description: "Slot 2", id: `${usedPrefix}apuntar 2` },
-              { title: "⚡ Titular 3", description: "Slot 3", id: `${usedPrefix}apuntar 3` },
-              { title: "⚡ Titular 4", description: "Slot 4", id: `${usedPrefix}apuntar 4` },
-              { title: "🐾 Suplente 1", description: "Slot 5", id: `${usedPrefix}apuntar 5` },
-              { title: "🐾 Suplente 2", description: "Slot 6", id: `${usedPrefix}apuntar 6` },
-              { title: "🔄 Salir", description: "Salirse de la sala", id: `${usedPrefix}salir` },
-            ]
-          }
-        ],
+        sections: [{
+          title: "OPCIONES",
+          rows: [
+            { header: "⚡ Titular 1", title: "", description: "", id: `${usedPrefix}apuntar 1` },
+            { header: "⚡ Titular 2", title: "", description: "", id: `${usedPrefix}apuntar 2` },
+            { header: "⚡ Titular 3", title: "", description: "", id: `${usedPrefix}apuntar 3` },
+            { header: "⚡ Titular 4", title: "", description: "", id: `${usedPrefix}apuntar 4` },
+            { header: "🐾 Suplente 1", title: "", description: "", id: `${usedPrefix}apuntar 5` },
+            { header: "🐾 Suplente 2", title: "", description: "", id: `${usedPrefix}apuntar 6` },
+            { header: "🔄 Salir", title: "", description: "", id: `${usedPrefix}salir` },
+          ]
+        }],
         mentions: [...sala.titulares,...sala.suplentes, sala.admin].filter(Boolean)
-      }
-
-      const msg = generateWAMessageFromContent(m.chat, {
-        listMessage
       }, { quoted: m })
-
-      await conn.relayMessage(m.chat, msg.message, { messageId: msg.key.id })
       return
     }
 
