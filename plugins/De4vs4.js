@@ -1,150 +1,129 @@
-let handler = async (m, { conn, args, usedPrefix, command }) => {
-    let chat = global.db.data.chats[m.chat]
+import { proto } from '@whiskeysockets/baileys'
 
-    // Inicializar si no existe
-    if (!chat.vs4) chat.vs4 = {
-        active: false,
-        clan: '[RIVAL]',
-        hora: '[HORA]',
-        reglas: 'Sala, 4vs4, sin minas',
-        titulares: ['', '', ''], // 4 titulares
-        suplentes: ['', ''], // 2 suplentes
-        admin: ''
+let salas = global.salas4vs4 = global.salas4vs4 || {}
+
+let handler = async (m, { conn, args, command, usedPrefix }) => {
+  let chatId = m.chat
+  let user = m.sender
+
+  // [SUBCOMANDOS:.apuntar y.salir]
+  if (command === 'apuntar' || command === 'salir') {
+    let sala = salas[chatId]
+    if (!sala) return m.reply('❌ No hay sala activa')
+
+    let num = parseInt(args[0])
+
+    // [SALIR]
+    if (command === 'salir') {
+      let idxT = sala.titulares.indexOf(user)
+      let idxS = sala.suplentes.indexOf(user)
+      if (idxT!== -1) sala.titulares[idxT] = null
+      if (idxS!== -1) sala.suplentes[idxS] = null
+      await m.react('✅')
+      return conn.sendMessage(chatId, { text: usedPrefix + '4vs4' }) // [REFRESH]
     }
 
-    let data = chat.vs4
+    if (!num || num < 1 || num > 6) return m.reply('❌ Usa:.apuntar [1-6]\n1-4 = Titular | 5-6 = Suplente')
 
-    //.4vs4 = crear/reiniciar sala
+    // [EVITAR DOBLE]
+    if (sala.titulares.includes(user) || sala.suplentes.includes(user))
+      return m.reply('❌ Ya estás apuntado. Toca 🔄 Salir primero')
+
+    // [APUNTAR]
+    if (num >= 1 && num <= 4) {
+      if (sala.titulares[num-1]) return m.reply(`❌ Titular ${num} ya está ocupado`)
+      sala.titulares[num-1] = user
+    }
+    if (num >= 5 && num <= 6) {
+      if (sala.suplentes[num-5]) return m.reply(`❌ Suplente ${num-4} ya está ocupado`)
+      sala.suplentes[num-5] = user
+    }
+    await m.react('✅')
+    return conn.sendMessage(chatId, { text: usedPrefix + '4vs4' }) // [REFRESH]
+  }
+
+  // [COMANDO PRINCIPAL:.4vs4]
+  if (command === '4vs4') {
     if (!args[0]) {
-        data.active = true
-        data.admin = m.sender
-        data.titulares = ['', '', '']
-        data.suplentes = ['', '']
+      // [MOSTRAR SALA]
+      let sala = salas[chatId]
+      if (!sala) return m.reply(`❌ No hay sala activa.\nCrea una con: ${usedPrefix}4vs4 crear [Hora] [Reglas] [VS]`)
 
-        let { text, mentions } = await generarTexto(data)
-        let menu = `${text}
+      let txt = `╭───〔 🔥 4 VS 4 〕───╮\n`
+      txt += `│\n│ *VS:* ${sala.vs}\n│ *🕚 Hora:* ${sala.hora}\n│ *👑 Admin:* @${sala.admin.split('@')[0]}\n│ *📜 Reglas:* ${sala.reglas}\n│\n`
+      txt += `├─ *TITULARES* [${sala.titulares.filter(v => v).length}/4]\n`
+      txt += sala.titulares.map((v, i) => `│ ⚡ ${i+1}. ${v? `@${v.split('@')[0]}` : '_Vacío_'}`).join('\n') + '\n│\n'
+      txt += `├─ *SUPLENTES* [${sala.suplentes.filter(v => v).length}/2]\n`
+      txt += sala.suplentes.map((v, i) => `│ 🐾 ${i+1}. ${v? `@${v.split('@')[0]}` : '_Vacío_'}`).join('\n') + '\n'
+      txt += `╰────────────────────╯\n\n*👇 Toca para apuntarte*`
 
-*📝 PARA APUNTARTE COPIA Y PEGA:*
-⚡ Titular 1: ${usedPrefix}apuntar 1
-⚡ Titular 2: ${usedPrefix}apuntar 2
-⚡ Titular 3: ${usedPrefix}apuntar 3
-⚡ Titular 4: ${usedPrefix}apuntar 4
-🐾 Suplente 1: ${usedPrefix}apuntar 5
-🐾 Suplente 2: ${usedPrefix}apuntar 6
-🔄 Salir: ${usedPrefix}salir
+      // [BOTONES 8] 2 filas porque WA solo deja 3 por fila
+      let buttons = [
+        { buttonId: `${usedPrefix}apuntar 1`, buttonText: { displayText: '⚡ T1' }, type: 1 },
+        { buttonId: `${usedPrefix}apuntar 2`, buttonText: { displayText: '⚡ T2' }, type: 1 },
+        { buttonId: `${usedPrefix}apuntar 3`, buttonText: { displayText: '⚡ T3' }, type: 1 },
+      ]
+      let buttons2 = [
+        { buttonId: `${usedPrefix}apuntar 4`, buttonText: { displayText: '⚡ T4' }, type: 1 },
+        { buttonId: `${usedPrefix}apuntar 5`, buttonText: { displayText: '🐾 S1' }, type: 1 },
+        { buttonId: `${usedPrefix}apuntar 6`, buttonText: { displayText: '🐾 S2' }, type: 1 },
+      ]
+      let buttons3 = [
+        { buttonId: `${usedPrefix}salir`, buttonText: { displayText: '🔄 Salir' }, type: 1 },
+        { buttonId: `${usedPrefix}4vs4`, buttonText: { displayText: '🔄 Refresh' }, type: 1 },
+      ]
 
-*⚙️ ADMIN:*
-${usedPrefix}4vs4 edit [Hora] [Reglas]
-${usedPrefix}4vs4 cerrar = Borrar sala`
-        return conn.sendMessage(m.chat, { text: menu, mentions })
+      await conn.sendButtonMessages(chatId, [
+        { text: txt, footer: `Admin: @${sala.admin.split('@')[0]}`, buttons: buttons, headerType: 1, mentions: [...sala.titulares,...sala.suplentes, sala.admin].filter(Boolean) },
+        { text: ' ', footer: ' ', buttons: buttons2, headerType: 1 },
+        { text: ' ', footer: ' ', buttons: buttons3, headerType: 1 },
+      ], { quoted: m })
+      return
     }
 
-    //.4vs4 edit Clan Hora Reglas
-    if (args[0] === 'edit') {
-        if (!data.active) return m.reply('❌ No hay sala activa. Usa `.4vs4` primero')
-        if (data.admin!== m.sender &&!m.isAdmin) return m.reply('❌ Solo el admin de la sala o un admin del grupo.')
+    let tipo = args[0].toLowerCase()
 
-        let [clan, hora,...reglasArr] = args.slice(1)
-        let reglas = reglasArr.join(' ')
-
-        if (clan && clan!== '_') data.clan = clan
-        if (hora && hora!== '_') data.hora = hora
-        if (reglas) data.reglas = reglas
-
-        let { text, mentions } = await generarTexto(data)
-        return conn.sendMessage(m.chat, { text: text + '\n\n✅ Sala actualizada', mentions })
+    // [CREAR SALA]
+    if (tipo === 'crear') {
+      if (salas[chatId]) return m.reply('❌ Ya hay una sala activa. Ciérrala con.4vs4 cerrar')
+      let hora = args[1] || '5Pm'
+      let reglas = args[2] || 'Apostado'
+      let vs = args[3] || 'Tkm'
+      salas[chatId] = {
+        admin: user,
+        vs: vs,
+        hora: hora,
+        reglas: reglas,
+        titulares: [null, null, null, null],
+        suplentes: [null, null]
+      }
+      return m.reply(`✅ Sala 4vs4 creada vs ${vs} a las ${hora}\nUsa.4vs4 para ver la sala con botones`)
     }
 
-    //.4vs4 cerrar = ELIMINAR LISTA
-    if (args[0] === 'cerrar') {
-        if (!data.active) return m.reply('❌ No hay sala activa')
-        if (data.admin!== m.sender &&!m.isAdmin) return m.reply('❌ Solo el admin de la sala o un admin del grupo.')
-        data.active = false
-        data.titulares = ['', '', '']
-        data.suplentes = ['', '']
-        data.clan = '[RIVAL]'
-        data.hora = '[HORA]'
-        data.reglas = 'Sala, 4vs4, sin minas'
-        data.admin = ''
-        return m.reply('🗑️ Sala eliminada 100%. Usa `.4vs4` para crear otra')
+    // [EDITAR SALA]
+    if (tipo === 'edit') {
+      let sala = salas[chatId]
+      if (!sala) return m.reply('❌ No hay sala')
+      if (sala.admin!== user) return m.reply('❌ Solo el admin')
+      sala.hora = args[1] || sala.hora
+      sala.reglas = args[2] || sala.reglas
+      sala.vs = args[3] || sala.vs
+      return m.reply(`✅ Sala editada\nVS: ${sala.vs}\nHora: ${sala.hora}\nReglas: ${sala.reglas}`)
     }
+
+    // [CERRAR SALA]
+    if (tipo === 'cerrar') {
+      let sala = salas[chatId]
+      if (!sala) return m.reply('❌ No hay sala')
+      if (sala.admin!== user) return m.reply('❌ Solo el admin')
+      delete salas[chatId]
+      return m.reply('🗑️ Sala 4vs4 eliminada')
+    }
+  }
 }
-handler.help = ['4vs4', '4vs4 edit Clan Hora Reglas', '4vs4 cerrar']
-handler.tags = ['ff']
-handler.command = /^(4vs4)$/i
+
+handler.help = ['4vs4', 'apuntar', 'salir']
+handler.tags = ['freefire']
+handler.command = /^(4vs4|apuntar|salir)$/i
 handler.group = true
 export default handler
-
-//.apuntar 1 al 6
-let apuntar = async (m, { conn, args, usedPrefix }) => {
-    let chat = global.db.data.chats[m.chat]
-    let data = chat.vs4
-    if (!data?.active) return m.reply('❌ No hay sala activa. Usa `.4vs4`')
-
-    let pos = parseInt(args[0]) - 1
-    let user = `@${m.sender.split('@')[0]}`
-
-    if (isNaN(pos)) return m.reply(`❌ Usa un número del 1 al 6\nEj: ${usedPrefix}apuntar 1`)
-
-    if ([...data.titulares,...data.suplentes].includes(user))
-        return m.reply(`❌ Ya estás apuntado. Usa ${usedPrefix}salir primero`)
-
-    if (pos >= 0 && pos < 4) {
-        if (data.titulares[pos]) return m.reply(`❌ El puesto ${pos+1} ya está ocupado`)
-        data.titulares[pos] = user
-    } else if (pos >= 4 && pos < 6) {
-        if (data.suplentes[pos - 4]) return m.reply(`❌ El puesto S${pos-3} ya está ocupado`)
-        data.suplentes[pos - 4] = user
-    } else return m.reply('❌ Solo del 1 al 6')
-
-    let { text, mentions } = await generarTexto(data)
-    conn.sendMessage(m.chat, { text, mentions })
-}
-apuntar.command = /^(apuntar)$/i
-export { apuntar }
-
-//.salir
-let salir = async (m, { conn, usedPrefix }) => {
-    let chat = global.db.data.chats[m.chat]
-    let data = chat.vs4
-    if (!data?.active) return m.reply('❌ No hay sala activa.')
-
-    let user = `@${m.sender.split('@')[0]}`
-    let idxTit = data.titulares.indexOf(user)
-    let idxSup = data.suplentes.indexOf(user)
-
-    if (idxTit!== -1) data.titulares[idxTit] = ''
-    else if (idxSup!== -1) data.suplentes[idxSup] = ''
-    else return m.reply('❌ No estás en la lista.')
-
-    let { text, mentions } = await generarTexto(data)
-    conn.sendMessage(m.chat, { text: text + '\n\n🔄 Saliste de la lista', mentions })
-}
-salir.command = /^(salir)$/i
-export { salir }
-
-// Función para generar el texto y menciones
-async function generarTexto(data) {
-    let mentions = [data.admin,...data.titulares.filter(Boolean),...data.suplentes.filter(Boolean)].filter(Boolean)
-    mentions = [...new Set(mentions)]
-
-    let texto = `╭───〔 🔥 4 VS 4 〕───╮
-│
-│ *VS:* ${data.clan}
-│ *🕚 Hora:* ${data.hora}
-│ *👑 Admin:* @${data.admin.split('@')[0]}
-│ *📜 Reglas:* ${data.reglas}
-│
-├─ *TITULARES* [4/4]
-│ ⚡ 1. ${data.titulares[0] || '_Vacío_'}
-│ ⚡ 2. ${data.titulares[1] || '_Vacío_'}
-│ ⚡ 3. ${data.titulares[2] || '_Vacío_'}
-│ ⚡ 4. ${data.titulares[3] || '_Vacío_'}
-│
-├─ *SUPLENTES* [2/2]
-│ 🐾 1. ${data.suplentes[0] || '_Vacío_'}
-│ 🐾 2. ${data.suplentes[1] || '_Vacío_'}
-│
-╰────────────────────╯`
-    return { text: texto, mentions: mentions }
-}
