@@ -1,6 +1,6 @@
 import jimp from 'jimp'
 
-let handler = async (m, { conn }) => {
+let handler = async (m, { conn, args }) => {
   let q = m.quoted? m.quoted : m
   let mime = (q.msg || q).mimetype || ''
   if (!/image/.test(mime)) return m.reply('📸 Responde a una imagen con.ehd')
@@ -8,24 +8,54 @@ let handler = async (m, { conn }) => {
   let media = await q.download()
   if (!media || media.length < 5000) return m.reply('⚠️ Imagen muy chica <300px.')
 
+  let modoFull = args[0] === 'full' //.ehd full = sin compresión
+
   await conn.sendMessage(m.chat, { react: { text: '✨', key: m.key } })
 
   try {
     let img = await jimp.read(media)
     let w = img.bitmap.width
     let h = img.bitmap.height
-    
-    // x4 con resize bicubic = lo mejor de Jimp
-    img.resize(w * 4, h * 4, jimp.RESIZE_BICUBIC)
-    img.quality(100)
 
-    let buffer = await img.getBufferAsync(jimp.MIME_JPEG)
-    await conn.sendFile(m.chat, buffer, 'ehd.jpg', `*ENHANCE HD x4 JIMP* ✅\n${w}x${h} -> ${w*4}x${h*4}\n» 0 API, 0 saturación\n» Manda como documento para 0 compresión`, m)
+    img.resize(w * 4, h * 4, jimp.RESIZE_BICUBIC) // x4
+
+    let buffer, caption, filename
+
+    if(modoFull){
+      // MODO FULL: 100% calidad, 4MB-8MB
+      buffer = await img.quality(100).getBufferAsync(jimp.MIME_JPEG)
+      filename = `EHD_${w*4}x${h*4}_FULL.jpg`
+      caption = `*ENHANCE HD x4 FULL* ✅\n${w}x${h} -> ${w*4}x${h*4}px\nPeso: ${(buffer.length/1024/1024).toFixed(2)}MB\n» 0 Compresión WA`
+    } else {
+      // MODO LITE: Auto <1MB
+      let targetSize = 950 * 1024 // 950KB
+      let quality = 85
+      buffer = await img.quality(quality).getBufferAsync(jimp.MIME_JPEG)
+
+      while(buffer.length > targetSize && quality > 60){
+        quality -= 3
+        buffer = await img.quality(quality).getBufferAsync(jimp.MIME_JPEG)
+      }
+      filename = `EHD_${w*4}x${h*4}_LITE.jpg`
+      caption = `*ENHANCE HD x4 LITE* ✅\n${w}x${h} -> ${w*4}x${h*4}px\nPeso: ${(buffer.length/1024/1024).toFixed(2)}MB\nCalidad: ${quality}%`
+    }
+
+    // CLAVE: Se envía como Documento para que WA no lo comprima
+    await conn.sendMessage(m.chat, {
+      document: buffer,
+      mimetype: 'image/jpeg',
+      fileName: filename,
+      caption: caption
+    }, { quoted: m })
+
+    await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } })
 
   } catch(e) {
     console.log(e)
-    m.reply('⚠️ Falló. Imagen corrupta o formato webp/sticker.')
+    m.reply('⚠️ Falló. Formato no soportado.')
   }
 }
-handler.command = /^(ehd)$/i
+handler.help = ['ehd [full]']
+handler.tags = ['tools']
+handler.command = /^(ehd|hd4k)$/i
 export default handler
