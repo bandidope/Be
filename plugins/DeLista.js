@@ -5,7 +5,7 @@ const diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'vierne
 const diasValidos = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'extra']
 const diasBorrar = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'] // <- Solo Lunes-Sab
 const emojiDia = '🌀'
-const IMAGEN_URL = 'https://raw.githubusercontent.com/bandidope/Fotos/refs/heads/master/fotos/logo.png'
+const IMAGEN_FALLBACK = 'https://raw.githubusercontent.com/bandidope/Fotos/refs/heads/master/fotos/logo.png' // <- TU FOTO GITHUB
 const MARCA = 'For Three Bot 🌀'
 const TZ = 'America/Lima'
 
@@ -39,8 +39,17 @@ let handler = async (m, { conn, text, args, isAdmin, isOwner }) => {
         txt += `# (${MARCA})`
       }
     }
+
+    // 1. INTENTA AGARRAR FOTO DEL GRUPO
+    let imgGrupo = null
     try {
-      return await conn.sendMessage(m.chat, { image: { url: IMAGEN_URL }, caption: txt.trim() }, { quoted: m })
+      imgGrupo = await conn.profilePictureUrl(m.chat, 'image')
+    } catch(e) {
+      imgGrupo = IMAGEN_FALLBACK // <- SI FALLA, USA GITHUB
+    }
+
+    try {
+      return await conn.sendMessage(m.chat, { image: { url: imgGrupo }, caption: txt.trim() }, { quoted: m })
     } catch(e) {
       return m.reply(`⚠️ Falló la imagen. Te mando solo texto:\n\n${txt.trim()}`)
     }
@@ -94,6 +103,6 @@ let handler = async (m, { conn, text, args, isAdmin, isOwner }) => {
 
 handler.help = ['lista']
 handler.tags = ['main']
-handler.command = /^lista$/i // <- AQUI ESTA EL CAMBIO
+handler.command = /^lista$/i
 handler.group = true
 export default handler
