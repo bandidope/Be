@@ -1,4 +1,5 @@
 import fetch from 'node-fetch'
+import FormData from 'form-data'
 
 const EVOGb_KEY = 'evogb-KnbSAgv7' // [TU KEY]
 
@@ -12,32 +13,36 @@ let handler = async (m, { conn, command }) => {
   await m.react('⏳')
 
   try {
-    // 1. Descarga la imagen del bot
+    // 1. Descarga la imagen
     let media = await m.quoted.download()
     
-    // 2. Envía a Evogb para convertir a DOCX
+    // 2. [FIX] FormData con Buffer + filename
     let form = new FormData()
-    form.append('file', media, 'image.jpg')
-    form.append('format', 'docx') // docx, pdf, pptx
+    form.append('file', media, { filename: 'image.jpg', contentType: m.quoted.mimetype })
+    form.append('format', command === 'topdf' ? 'pdf' : 'docx') 
 
     let res = await fetch(`https://api.evogb.org/api/converter-img`, {
       method: 'POST',
       headers: {
-        'apikey': EVOGb_KEY
+        'apikey': EVOGb_KEY,
+        ...form.getHeaders() // [CLAVE] Para el boundary
       },
       body: form
     })
 
-    if (!res.ok) throw new Error(`Error ${res.status}`)
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`)
     
     let buffer = await res.buffer()
+    
+    let ext = command === 'topdf' ? 'pdf' : 'docx'
+    let mime = ext === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     
     // 3. Envía el documento
     await conn.sendMessage(m.chat, {
       document: buffer,
-      fileName: `convertido.docx`,
-      mimetype: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      caption: `✅ *Imagen convertida a DOCX*\nPowered by Evogb`
+      fileName: `convertido.${ext}`,
+      mimetype: mime,
+      caption: `✅ *Imagen convertida a ${ext.toUpperCase()}*\nPowered by Evogb`
     }, { quoted: m })
     
     await m.react('✅')
@@ -49,7 +54,7 @@ let handler = async (m, { conn, command }) => {
   }
 }
 
-handler.help = ['todoc']
+handler.help = ['todoc', 'topdf']
 handler.tags = ['tools']
 handler.command = /^(todoc|topdf)$/i 
 export default handler
