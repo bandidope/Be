@@ -1,71 +1,79 @@
-import axios from 'axios';
-import FormData from 'form-data';
+/**
+ * 📂 COMANDO: Uchiha AI Image Upscaler
+ * 📝 DESCRIPCIÓN: Mejora la calidad de una imagen (Upscale) utilizando los servidores de IA de la API.
+ * 👤 CREADOR: For Three Bot 🌀
+ * ⚡ CANAL: For Three Bot 🌀
+ * 🔌 API: https://api.evogb.org
+ */
+import fetch from "node-fetch"
+import FormData from "form-data"
+import crypto from "crypto"
 
-let handler = async (m, { conn, prefix, command }) => {
-  try {
-    let q = m.quoted ? m.quoted : m;
-    let mime = (q.msg || q).mimetype || '';
-    
-    if (!mime) return m.reply(`📸 Responde a una imagen con el comando *${prefix}${command}* para mejorarla.`);
-    if (!mime.startsWith('image')) return m.reply(`⚠️ Solo se admiten imágenes.`);
+const MARCA = 'For Three Bot 🌀' // <- TU MARCA
 
-    await conn.sendMessage(m.chat, {
-      react: { text: "🔄", key: m.key }
-    });
+let handler = async (m, { conn, text, usedPrefix, command }) => {
+    const key = Buffer.from('c2FzdWtl', 'base64').toString('utf-8')
+    let q = m.quoted? m.quoted : m
+    let mime = (q.msg || q).mimetype || ''
+    let urlTarget = text? text.trim() : ''
 
-    const media = await q.download();
+    if (!urlTarget &&!/image\/(jpe?g|png)/.test(mime)) {
+        return conn.reply(m.chat, `*☁️ Uchiha Cloud AI ${MARCA}*\n\n*Uso correcto:*\n> Responde a una imagen, envía una o proporciona un enlace con el comando *${usedPrefix + command}*`, m)
+    }
 
-    const enhancedBuffer = await ihancer(media, { method: 1, size: 'high' });
+    await m.react('⏳')
+    try {
+        let finalUrl = urlTarget
 
-    const caption = `✨ *Imagen mejorada con éxito*\n⚙️ Método: iHancer AI\n🔝 Calidad: High\n🔥 By: 𝙏𝙝𝙚 𝙆𝙞𝙣𝙜'𝙨 𝘽𝙤𝙩 👾`;
+        if (!finalUrl && /image\/(jpe?g|png)/.test(mime)) {
+            let imgBuffer = await q.download()
+            let ext = mime.split('/')[1] || 'jpg'
+            let filename = 'media-' + crypto.randomBytes(8).toString('hex') + '.' + ext
 
-    await conn.sendMessage(m.chat, {
-      image: enhancedBuffer,
-      caption
-    }, { quoted: m });
+            let formulario = new FormData()
+            formulario.append('file', imgBuffer, { filename, contentType: mime })
 
-    await conn.sendMessage(m.chat, {
-      react: { text: "✅", key: m.key }
-    });
+            let resUpload = await fetch(`https://api.evogb.org/tools/upload?key=${key}`, {
+                method: 'POST',
+                body: formulario,
+                headers: {
+                   ...formulario.getHeaders(),
+                    'User-Agent': 'Mozilla/5.0'
+                }
+            })
+            let jsonUpload = await resUpload.json()
+            if (jsonUpload.status && jsonUpload.url) {
+                finalUrl = jsonUpload.url
+            } else {
+                await m.react('❌')
+                return m.reply(`❌ Error al subir imagen temporal:\n🔴 ${jsonUpload?.message || 'Sin respuesta'}\n${MARCA}`)
+            }
+        }
 
-  } catch (e) {
-    console.error(e);
-    await conn.sendMessage(m.chat, {
-      react: { text: "❌", key: m.key }
-    });
-    await m.reply("⚠️ Ocurrió un error al procesar la imagen con iHancer.");
-  }
-};
+        let resDl = await fetch(`https://api.evogb.org/tools/upscale?method=url&url=${encodeURIComponent(finalUrl)}&key=${key}`)
+        let contentType = resDl.headers.get("content-type")
 
-async function ihancer(buffer, { method = 1, size = 'low' } = {}) {
-    const _size = ['low', 'medium', 'high']
+        if (contentType && contentType.includes("application/json")) {
+            let jsonDl = await resDl.json()
+            await m.react('❌')
+            return m.reply(`❌ Error de la API: ${jsonDl.message || 'No se pudo mejorar la imagen.'}\n${MARCA}`)
+        }
 
-    if (!buffer || !Buffer.isBuffer(buffer)) throw new Error('Se requiere una imagen')
-    if (method < 1 || method > 4) throw new Error('Métodos disponibles: 1, 2, 3, 4')
-    if (!_size.includes(size)) throw new Error(`Calidades disponibles: ${_size.join(', ')}`)
+        let buffer = await resDl.buffer()
+        let info = `*☁️ Uchiha Cloud - Imagen Mejorada*\n\n✨ *Resultado:* Éxito al procesar la imagen con IA.\n\n📂 *COMANDO:* Uchiha AI Image Upscaler\n👤 *CREADOR:* ${MARCA}\n⚡ *CANAL:* ${MARCA}\n🔌 *API:* https://api.evogb.org` // <- TU MARCA
 
-    const form = new FormData()
-    form.append('method', method.toString())
-    form.append('is_pro_version', 'false')
-    form.append('is_enhancing_more', 'false')
-    form.append('max_image_size', size)
-    form.append('file', buffer, `benja_${Date.now()}.jpg`)
+        await conn.sendMessage(m.chat, { image: buffer, caption: info }, { quoted: m })
+        await m.react('✅')
 
-    const { data } = await axios.post('https://ihancer.com/api/enhance', form, {
-        headers: {
-            ...form.getHeaders(),
-            'accept-encoding': 'gzip',
-            'host': 'ihancer.com',
-            'user-agent': 'Dart/3.5 (dart:io)'
-        },
-        responseType: 'arraybuffer'
-    })
-
-    return Buffer.from(data)
+    } catch (e) {
+        console.error(e)
+        await m.react('❌')
+        m.reply(`❌ Ocurrió un error interno o los servidores de IA se encuentran saturados.\n${MARCA}`) // <- TU MARCA
+    }
 }
 
-handler.help = ['hd'];
-handler.tags = ['ai', 'imagen'];
-handler.command = ['hd', 'upscale', 'enhance'];
+handler.help = ['upscale', 'remini']
+handler.tags = ['tools']
+handler.command = /^(upscale|remini|hd|mejorar)$/i
 
-export default handler;
+export default handler
