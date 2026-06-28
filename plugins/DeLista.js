@@ -5,7 +5,7 @@ const diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'vierne
 const diasValidos = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'extra']
 const diasBorrar = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'] // <- Solo Lunes-Sab
 const emojiDia = '-'
-const IMAGEN_FALLBACK = 'https://raw.githubusercontent.com/bandidope/Fotos/refs/heads/master/fotos/logo.png'
+const IMAGEN_FALLBACK = 'https://raw.githubusercontent.com/bandidope/Fotos/refs/heads/master/fotos/logo.png' // <- Tu foto de GitHub
 const MARCA = 'For Three Bot'
 const TZ = 'America/Lima'
 
@@ -15,8 +15,14 @@ const getDB = () => {
 }
 
 const getHoy = () => {
-  let dia = new Date().toLocaleString('en-US', { timeZone: TZ, weekday: 'long' }).toLowerCase()
-  return { diaReal: dia, diaDB: dia === 'domingo'? 'extra' : dia, esDomingo: dia === 'domingo' }
+  // FIX: Saca el día en español de Perú y quita tildes
+  let diaES = new Date().toLocaleString('es-PE', { timeZone: TZ, weekday: 'long' }).toLowerCase()
+  diaES = diaES.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  return {
+    diaReal: diaES,
+    diaDB: diaES === 'domingo'? 'extra' : diaES,
+    esDomingo: diaES === 'domingo'
+  }
 }
 
 let handler = async (m, { conn, text, args, isAdmin, isOwner }) => {
@@ -39,13 +45,21 @@ let handler = async (m, { conn, text, args, isAdmin, isOwner }) => {
         txt += `# (${MARCA})`
       }
     }
+    // Foto del grupo o fallback GitHub
     let imgGrupo = null
-    try { imgGrupo = await conn.profilePictureUrl(m.chat, 'image') } catch(e) { imgGrupo = IMAGEN_FALLBACK }
-    try { return await conn.sendMessage(m.chat, { image: { url: imgGrupo }, caption: txt.trim() }, { quoted: m }) }
-    catch(e) { return m.reply(`⚠️ Falló la imagen. Te mando solo texto:\n\n${txt.trim()}`) }
+    try {
+      imgGrupo = await conn.profilePictureUrl(m.chat, 'image')
+    } catch(e) {
+      imgGrupo = IMAGEN_FALLBACK
+    }
+    try {
+      return await conn.sendMessage(m.chat, { image: { url: imgGrupo }, caption: txt.trim() }, { quoted: m })
+    } catch(e) {
+      return m.reply(`⚠️ Falló la imagen. Te mando solo texto:\n\n${txt.trim()}`)
+    }
   }
 
-  // 1. BLOQUE EXTRAS VA PRIMERO [FIX]
+  // FIX: BLOQUE EXTRAS VA PRIMERO para que no lo atrape el otro if
   if(sub === 'eliminar' && args[1] === 'extras'){
     if(!m.isGroup) return m.reply('⚠️ Este comando solo funciona en grupos.')
     if(!isAdmin &&!isOwner) return m.reply('⚠️ Solo los *admins* del grupo pueden borrar.')
@@ -54,7 +68,7 @@ let handler = async (m, { conn, text, args, isAdmin, isOwner }) => {
     return m.reply('🗑️ *EXTRA ELIMINADO*\nLista de EXTRA limpiada a 0.')
   }
 
-  // 2. BLOQUE LUNES-SAB VA DESPUES
+  // BLOQUE LUNES-SAB
   if(sub === 'eliminar'){
     if(!m.isGroup) return m.reply('⚠️ Este comando solo funciona en grupos.')
     if(!isAdmin &&!isOwner) return m.reply('⚠️ Solo los *admins* del grupo pueden borrar toda la lista.')
@@ -93,6 +107,6 @@ let handler = async (m, { conn, text, args, isAdmin, isOwner }) => {
 
 handler.help = ['lista']
 handler.tags = ['main']
-handler.command = /^lista$/i
+handler.command = /^lista$/i // <- AQUI ESTA EL CAMBIO
 handler.group = true
 export default handler
