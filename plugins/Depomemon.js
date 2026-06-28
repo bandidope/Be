@@ -5,50 +5,18 @@ const reward = 1000
 const maxIntentos = 2
 const sessions = new Map() 
 
-// [FALLBACK FINAL] Cuadro negro 512x512
+// [VALIDADOR] Revisa que sea JPG/PNG real
+const isImageBuffer = (buf) => {
+  if (!buf || buf.length < 100) return false
+  const jpg = buf[0] === 0xFF && buf[1] === 0xD8
+  const png = buf[0] === 0x89 && buf[1] === 0x50
+  return jpg || png
+}
+
+// [FALLBACK] Cuadro negro si Alyacore falla
 const createBlackBox = async () => {
   const res = await fetch('https://placehold.co/512x512/000/000.png')
   return await res.buffer()
-}
-
-// [FUNCION] Intenta las 10 APIs en orden
-const getSilhouette = async (name, img) => {
-  const apis = [
-    // 1. Dorratz - Mejor calidad
-    () => fetch(`https://api.dorratz.com/pokesilhouette?url=${encodeURIComponent(img)}`).then(r => r.buffer()),
-    // 2. Popcat V2 
-    () => fetch(`https://api.popcat.xyz/v2/pokemon?pokemon=${name}`).then(r => r.json()).then(j => fetch(j.image).then(r => r.buffer())),
-    // 3. Vihangp 
-    () => fetch(`https://api.vihangp.me/poke/silhouette?name=${name}`).then(r => r.buffer()),
-    // 4. Some Random API
-    () => fetch(`https://some-random-api.com/img/pokemon?pokemon=${name}`).then(r => r.json()).then(j => fetch(j.link).then(r => r.buffer())),
-    // 5. API AgustinnRdt 
-    () => fetch(`https://api.agustinnrdt.my.id/poke/silhouette?url=${encodeURIComponent(img)}`).then(r => r.buffer()),
-    // 6. API Lolhuman
-    () => fetch(`https://api.lolhuman.xyz/api/pokesilhouette?apikey=GataDios&img=${encodeURIComponent(img)}`).then(r => r.buffer()),
-    // 7. API Xteam
-    () => fetch(`https://api.xteam.xyz/poke/silhouette?url=${encodeURIComponent(img)}&APIKEY=d90a9e272263671b`).then(r => r.buffer()),
-    // 8. API Zenzz
-    () => fetch(`https://api.zeks.me/api/pokesilhouette?url=${encodeURIComponent(img)}&apikey=apivinz`).then(r => r.buffer()),
-    // 9. API Daffa
-    () => fetch(`https://api.daffa.my.id/poke/silhouette?url=${encodeURIComponent(img)}`).then(r => r.buffer()),
-    // 10. API Caliph
-    () => fetch(`https://api.caliph.dev/api/poke/silhouette?url=${encodeURIComponent(img)}&apikey=free`).then(r => r.buffer()),
-  ]
-
-  for (let i = 0; i < apis.length; i++) {
-    try {
-      const buffer = await apis[i]()
-      if (buffer && buffer.length > 1000) { // Verifica que no sea error html
-        console.log(`Silueta OK con API ${i+1}`)
-        return buffer
-      }
-    } catch (e) {
-      console.log(`API ${i+1} falló`)
-      continue // Siguiente API
-    }
-  }
-  throw new Error('Todas las APIs fallaron')
 }
 
 let handler = async (m, { conn, command }) => {
@@ -56,7 +24,7 @@ let handler = async (m, { conn, command }) => {
   let user = global.db.data.users[m.sender]
   
   if (command === 'pokedex') {
-    if (sessions.has(id)) return m.reply('⚠️ Ya hay un Pokémon en juego. Responde o usa .psalir')
+    if (sessions.has(id)) return m.reply('⚠️ Ya hay un Pokémon en juego. Responde o usa.psalir')
 
     await conn.sendMessage(m.chat, { react: { text: '🎮', key: m.key } })
     
@@ -69,12 +37,18 @@ let handler = async (m, { conn, command }) => {
     let img = json.sprites.other['official-artwork'].front_default
     let type = json.types.map(t => t.type.name).join(', ').toUpperCase()
 
-    // [10 FALLBACKS] 
+    // [SOLO ALYACORE]
     let siluetaBuffer;
     try {
-      siluetaBuffer = await getSilhouette(name, img)
-    } catch {
-      console.log('Fallback 11: Cuadro negro')
+      let apiUrl = `https://api.alyacore.xyz/api/poke/silhouette?pokemon=${name}`
+      let resApi = await fetch(apiUrl)
+      if (!resApi.ok) throw new Error('Alyacore down')
+      let buffer = await resApi.buffer()
+      if (!isImageBuffer(buffer)) throw new Error('Alyacore basura')
+      siluetaBuffer = buffer
+      console.log('Silueta OK con Alyacore')
+    } catch (e) {
+      console.log('Alyacore falló, usando cuadro negro:', e.message)
       siluetaBuffer = await createBlackBox()
     }
 
@@ -107,7 +81,7 @@ let handler = async (m, { conn, command }) => {
 
 handler.before = async (m) => {
   let id = m.chat
-  if (!sessions.has(id) || !m.text || m.isBaileys) return false
+  if (!sessions.has(id) ||!m.text || m.isBaileys) return false
   
   let session = sessions.get(id)
   let user = global.db.data.users[m.sender]
