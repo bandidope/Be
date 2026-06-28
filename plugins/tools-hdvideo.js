@@ -3,11 +3,13 @@ import fs from "fs";
 import path from "path";
 import FormData from "form-data";
 import { randomBytes } from "crypto";
-import { downloadContentFromMessage } from '@whiskeysockets/baileys' // <- NUEVO
+import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
 const MARCA = 'For Three Bot 🌀'
 const TEMP_DIR = './temp'
 const MAX_SIZE = 100 * 1024 * 1024
+const API_URL = "http://api.drizznesiasite.biz.id:4167/hdvideo"
+const MAX_RETRIES = 3 // <- 3 intentos
 
 let handler = async (m, { conn, text, command, usedPrefix }) => {
   if (!m.quoted ||!/video|document/.test(m.quoted.mimetype || '')) {
@@ -34,7 +36,6 @@ let handler = async (m, { conn, text, command, usedPrefix }) => {
   try {
     m.reply(`⏳ *Descargando video...*`);
 
-    // FIX BAILEYS V6+
     const type = m.quoted.mimetype.includes('document')? 'document' : 'video'
     const stream = await downloadContentFromMessage(m.quoted, type)
     let buffer = Buffer.from([])
@@ -50,14 +51,30 @@ let handler = async (m, { conn, text, command, usedPrefix }) => {
     form.append("resolution", targetHeight);
     form.append("fps", fps);
 
-    const response = await axios.post("http://api.drizznesiasite.biz.id:4167/hdvideo", form, {
-      headers: form.getHeaders(),
-      responseType: "stream",
-      timeout: 300000,
-      maxBodyLength: Infinity,
-      maxContentLength: Infinity,
-      validateStatus: s => s >= 200 && s < 300
-    });
+    // Bucle de reintentos
+    let response;
+    let lastError;
+    for (let i = 1; i <= MAX_RETRIES; i++) {
+      try {
+        response = await axios.post(API_URL, form, {
+          headers: form.getHeaders(),
+          responseType: "stream",
+          timeout: 300000,
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
+          validateStatus: s => s >= 200 && s < 300
+        });
+        break; // Si llega aquí, salió bien y rompe el bucle
+      } catch (err) {
+        lastError = err;
+        console.error(`HDVIDEO INTENTO ${i}/${MAX_RETRIES} FALLÓ:`, err.code || err.message);
+        if (i < MAX_RETRIES) {
+          await new Promise(r => setTimeout(r, i * 2000)) // Espera 2s, 4s...
+        }
+      }
+    }
+
+    if (!response) throw lastError; // Si fallaron los 3, tira el último error
 
     const writer = fs.createWriteStream(outputFile);
     response.data.pipe(writer);
@@ -70,8 +87,21 @@ let handler = async (m, { conn, text, command, usedPrefix }) => {
     await conn.sendMessage(m.chat, { video: finalBuffer, caption: `✅ *Video a ${res.toUpperCase()} ${fps}FPS*\n${MARCA}` }, { quoted: m });
 
   } catch (err) {
-    console.error('HDVIDEO ERROR:', err.message);
-    m.reply(`❌ *Error:* ${err.response?.status || err.message}\n${MARCA}`);
+    console.error('HDVIDEO ERROR FINAL:', err.message);
+
+    // Mensaje bonito según el error
+    let errorMsg = `❌ *Error al procesar el video*`;
+    if (err.code === 'EAI_AGAIN' || err.code === 'ENOTFOUND') {
+      errorMsg = `❌ *API HD caída* \n> El servidor no responde. Intenta en unos minutos.\n${MARCA}`;
+    } else if (err.code === 'ECONNABORTED') {
+      errorMsg = `❌ *Timeout* \n> La API tardó demasiado. Intenta con un video más corto.\n${MARCA}`;
+    } else if (err.response?.status) {
+      errorMsg = `❌ *Error API:* ${err.response.status}\n${MARCA}`;
+    } else {
+      errorMsg = `❌ *Error:* ${err.message}\n${MARCA}`;
+    }
+    m.reply(errorMsg);
+
   } finally {
     try { if (fs.existsSync(inputFile)) fs.unlinkSync(inputFile) } catch {}
     try { if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile) } catch {}
