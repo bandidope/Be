@@ -3,7 +3,7 @@ import fs from 'fs'
 const MARCA = 'For Three Bot 🌀'
 const DB_PATH = './database/precios.json'
 const IMG_DEFAULT = 'https://raw.githubusercontent.com/bandidope/Fotos/refs/heads/master/fotos/logo.png'
-const OWNER_NUM = '51936994155' // <-- TU NUMERO
+const OWNER_NUM = '51936994155' // TU NUMERO
 
 let handler = async (m, { conn, command, text, isOwner, isAdmin, usedPrefix }) => {
     
@@ -62,7 +62,7 @@ let handler = async (m, { conn, command, text, isOwner, isAdmin, usedPrefix }) =
         }
     }
 
-    // 5. CONTACTAR - BOTON
+    // 5. CONTACTAR
     if (command === 'owner') {
         const vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:Owner For Three Bot\nTEL;type=CELL;type=VOICE;waid=${OWNER_NUM}:${OWNER_NUM}\nEND:VCARD`
         await conn.sendMessage(m.chat, { 
@@ -71,16 +71,18 @@ let handler = async (m, { conn, command, text, isOwner, isAdmin, usedPrefix }) =
         }, { quoted: m })
     }
 
-    // 6. SOPORTE - BOTON 
+    // 6. SOPORTE CON BOTONES
     if (command === 'help') {
-        const helpText = `*❓ CENTRO DE SOPORTE ${MARCA}*\n
-*Comandos:*
-> ${usedPrefix}precios - Ver catálogo
-> ${usedPrefix}menu - Ver todos los comandos
-> ${usedPrefix}owner - Hablar con el Owner
-
-¿Duda? Toca Contactar 👆`
-        m.reply(helpText)
+        const buttons = [
+            { buttonId: '.menu', buttonText: { displayText: '📜 .menu' }, type: 1 },
+            { buttonId: '.precios', buttonText: { displayText: '📦 .precios' }, type: 1 },
+            { buttonId: '.owner', buttonText: { displayText: '💬 .owner' }, type: 1 }
+        ]
+        await conn.sendMessage(m.chat, {
+            text: `*❓ CENTRO DE SOPORTE ${MARCA}*\n\n_Toca lo que necesitas:_`,
+            footer: MARCA,
+            buttons: buttons, headerType: 1
+        }, { quoted: m })
     }
 }
 
