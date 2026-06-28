@@ -1,17 +1,12 @@
-let handler = async (m, { conn, args, usedPrefix, command }) => {
+const MARCA = 'For Three Bot 🌀'
 
-        let _muptime
-    if (process.send) {
-      process.send('uptime')
-      _muptime = await new Promise(resolve => {
-        process.once('message', resolve)
-        setTimeout(resolve, 1000)
-      }) * 1000
-    }
-    let muptime = clockString(_muptime)
-   m.reply(`*» Bot activo durante* : ${muptime}`) 
+let handler = async (m, { conn }) => {
+    let uptime = process.uptime() * 1000 // Uptime de Node.js en ms
+    let muptime = clockString(uptime)
+    m.reply(`*» Bot activo durante* : ${muptime}\n${MARCA}`) 
 }
-handler.help = ['runtime']
+
+handler.help = ['runtime', 'uptime']
 handler.tags = ['main']
 handler.command = ['runtime', 'uptime']
 export default handler
