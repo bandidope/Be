@@ -39,15 +39,15 @@ import { assistant_accessJadiBot } from './plugins/serbot-serbot.js'
 protoType();
 serialize();
 
-global.__filename = function filename(pathURL = import.meta.url, rmPrefix = platform !== 'win32') {
-  return rmPrefix ? /file:\/\/\//.test(pathURL) ? fileURLToPath(pathURL) : pathURL : pathToFileURL(pathURL).toString();
+global.__filename = function filename(pathURL = import.meta.url, rmPrefix = platform!== 'win32') {
+  return rmPrefix? /file:\/\/\//.test(pathURL)? fileURLToPath(pathURL) : pathURL : pathToFileURL(pathURL).toString();
 }; global.__dirname = function dirname(pathURL) {
   return path.dirname(global.__filename(pathURL, true));
 }; global.__require = function require(dir = import.meta.url) {
   return createRequire(dir);
 };
 
-global.API = (name, path = '/', query = {}, apikeyqueryname) => (name in global.APIs ? global.APIs[name] : name) + path + (query || apikeyqueryname ? '?' + new URLSearchParams(Object.entries({...query, ...(apikeyqueryname ? {[apikeyqueryname]: global.APIKeys[name in global.APIs ? global.APIs[name] : name]} : {})})) : '');
+global.API = (name, path = '/', query = {}, apikeyqueryname) => (name in global.APIs? global.APIs[name] : name) + path + (query || apikeyqueryname? '?' + new URLSearchParams(Object.entries({...query,...(apikeyqueryname? {[apikeyqueryname]: global.APIKeys[name in global.APIs? global.APIs[name] : name]} : {})})) : '');
 
 global.timestamp = {start: new Date};
 global.videoList = [];
@@ -56,21 +56,21 @@ global.videoListXXX = [];
 const __dirname = global.__dirname(import.meta.url);
 
 global.opts = new Object(yargs(process.argv.slice(2)).exitProcess(false).parse());
-global.prefix = global.prefijo ? new RegExp('^' + global.prefijo) : new RegExp('^[' + (opts['prefix'] || '*/i!#$%+£¢€¥^°=¶∆×÷π√✓©®:;?&.\\-.@').replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') + ']');
+global.prefix = global.prefijo? new RegExp('^' + global.prefijo) : new RegExp('^[' + (opts['prefix'] || '*/i!#$%+£¢€¥^°=¶∆×÷π√✓©®:;?&.\\-.@').replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') + ']');
 
-global.db = new Low(/https?:\/\//.test(opts['db'] || '') ? new cloudDBAdapter(opts['db']) : new JSONFile(`${opts._[0] ? opts._[0] + '_' : ''}${global.dbname}`));
+global.db = new Low(/https?:\/\//.test(opts['db'] || '')? new cloudDBAdapter(opts['db']) : new JSONFile(`${opts._[0]? opts._[0] + '_' : ''}${global.dbname}`));
 
-global.DATABASE = global.db; 
+global.DATABASE = global.db;
 global.loadDatabase = async function loadDatabase() {
   if (global.db.READ) {
     return new Promise((resolve) => setInterval(async function() {
       if (!global.db.READ) {
         clearInterval(this);
-        resolve(global.db.data == null ? global.loadDatabase() : global.db.data);
+        resolve(global.db.data == null? global.loadDatabase() : global.db.data);
       }
     }, 1 * 1000));
   }
-  if (global.db.data !== null) return;
+  if (global.db.data!== null) return;
   global.db.READ = true;
   await global.db.read().catch(console.error);
   global.db.READ = null;
@@ -81,7 +81,7 @@ global.loadDatabase = async function loadDatabase() {
     msgs: {},
     sticker: {},
     settings: {},
-    ...(global.db.data || {}),
+   ...(global.db.data || {}),
   };
   global.db.chain = chain(global.db.data);
 };
@@ -94,22 +94,31 @@ global.loadChatgptDB = async function loadChatgptDB() {
       setInterval(async function() {
         if (!global.chatgpt.READ) {
           clearInterval(this);
-          resolve( global.chatgpt.data === null ? global.loadChatgptDB() : global.chatgpt.data );
+          resolve( global.chatgpt.data === null? global.loadChatgptDB() : global.chatgpt.data );
         }
       }, 1 * 1000));
   }
-  if (global.chatgpt.data !== null) return;
+  if (global.chatgpt.data!== null) return;
   global.chatgpt.READ = true;
   await global.chatgpt.read().catch(console.error);
   global.chatgpt.READ = null;
   global.chatgpt.data = {
     users: {},
-    ...(global.chatgpt.data || {}),
+   ...(global.chatgpt.data || {}),
   };
   global.chatgpt.chain = lodash.chain(global.chatgpt.data);
 };
 loadChatgptDB();
 
+/* ===== FOR THREE STORE - BD VENTAS ===== */
+const TU_NUMERO_WSP = '51936994155@s.whatsapp.net'; // <-- CAMBIA TU NUMERO AQUI
+global.ventasDB = new Low(new JSONFile('./ventas.json'));
+global.loadVentasDB = async () => {
+  await global.ventasDB.read();
+  global.ventasDB.data ||= [];
+};
+await global.loadVentasDB();
+/* ===== FIN BD VENTAS ===== */
 
 global.authFile = global.Sesion
 const {state, saveState, saveCreds} = await useMultiFileAuthState(global.authFile)
@@ -118,7 +127,7 @@ const msgRetryCounterCache = new NodeCache()
 const {version} = await fetchLatestBaileysVersion()
 let phoneNumber = global.botNumberCode
 const methodCodeQR = process.argv.includes("qr")
-const methodCode = !!phoneNumber || process.argv.includes("code")
+const methodCode =!!phoneNumber || process.argv.includes("code")
 const MethodMobile = process.argv.includes("mobile")
 let rl = readline.createInterface({
 input: process.stdin,
@@ -138,37 +147,37 @@ let opcion
 if (methodCodeQR) {
 opcion = '1'
 }
-if (!methodCodeQR && !methodCode && !fs.existsSync(`./${authFile}/creds.json`)) {
+if (!methodCodeQR &&!methodCode &&!fs.existsSync(`./${authFile}/creds.json`)) {
 do {
-let lineM = '⋯ ⋯ ⋯ ⋯ ⋯ ⋯ ⋯ ⋯ ⋯ ⋯ ⋯ 》'
+let lineM = '⋯ ⋯ ⋯ ⋯ ⋯ 》'
 opcion = await question('🌱 Seleccione una opción :\n1. Conexión mediante código QR.\n2. onexión mediante código de 8 dígitos.\n---> ')
 if (!/^[1-2]$/.test(opcion)) {
 console.log('🌴 Por favor, seleccione solo 1 o 2.\n')
-}} while (opcion !== '1' && opcion !== '2' || fs.existsSync(`./${authFile}/creds.json`))
+}} while (opcion!== '1' && opcion!== '2' || fs.existsSync(`./${authFile}/creds.json`))
 }
 
 const filterStrings = [
 "Q2xvc2luZyBzdGFsZSBvcGVu",
-"Q2xvc2luZyBvcGVuIHNlc3Npb24=", 
+"Q2xvc2luZyBvcGVuIHNlc3Npb24=",
 "RmFpbGVkIHRvIGRlY3J5cHQ=",
 "U2Vzc2lvbiBlcnJvcg==",
 "RXJyb3I6IEJhZCBNQUM=",
 "RGVjcnlwdGVkIG1lc3NhZ2U="
 ]
-console.info = () => {} 
-console.debug = () => {} 
+console.info = () => {}
+console.debug = () => {}
 ['log', 'warn', 'error'].forEach(methodName => redefineConsoleMethod(methodName, filterStrings))
 const connectionOptions = {
 logger: pino({ level: 'silent' }),
-printQRInTerminal: opcion == '1' ? true : methodCodeQR ? true : false,
-mobile: MethodMobile, 
-browser: opcion == '1' ? ['WaBot', 'Edge', '20.0.04'] : methodCodeQR ? ['WaBot', 'Edge', '20.0.04'] : ["Ubuntu", "Opera", "20.0.04"],
+printQRInTerminal: opcion == '1'? true : methodCodeQR? true : false,
+mobile: MethodMobile,
+browser: opcion == '1'? ['WaBot', 'Edge', '20.0.04'] : methodCodeQR? ['WaBot', 'Edge', '20.0.04'] : ["Ubuntu", "Opera", "20.0.04"],
 auth: {
 creds: state.creds,
 keys: makeCacheableSignalKeyStore(state.keys, Pino({ level: "fatal" }).child({ level: "fatal" })),
 },
-markOnlineOnConnect: true, 
-generateHighQualityLinkPreview: true, 
+markOnlineOnConnect: true,
+generateHighQualityLinkPreview: true,
 syncFullHistory: false,
 getMessage: async (clave) => {
 let jid = jidNormalizedUser(clave.remoteJid)
@@ -207,7 +216,7 @@ console.log(chalk.bold.white(chalk.bgMagenta('🏝️ Código de vinculación :'
 
 conn.isInit = false;
 conn.well = false;
-conn.logger.info(`🌷 Iniciando . . .\n`);
+conn.logger.info(`🌷 Iniciando..\n`);
 
 if (!opts['test']) {
   if (global.db) {
@@ -226,7 +235,7 @@ function clearTmp() {
   tmp.forEach((dirname) => readdirSync(dirname).forEach((file) => filename.push(join(dirname, file))));
   return filename.map((file) => {
     const stats = statSync(file);
-    if (stats.isFile() && (Date.now() - stats.mtimeMs >= 1000 * 60 * 3)) return unlinkSync(file); 
+    if (stats.isFile() && (Date.now() - stats.mtimeMs >= 1000 * 60 * 3)) return unlinkSync(file);
     return false;
   });
 }
@@ -255,19 +264,17 @@ fs.watch(dirToWatchccc, (eventType, filename) => {
   }
 });
 
-
-
 async function connectionUpdate(update) {
   const {connection, lastDisconnect, isNewLogin} = update;
   global.stopped = connection;
   if (isNewLogin) conn.isInit = true;
   const code = lastDisconnect?.error?.output?.statusCode || lastDisconnect?.error?.output?.payload?.statusCode;
-  if (code && code !== DisconnectReason.loggedOut && conn?.ws.socket == null) {
+  if (code && code!== DisconnectReason.loggedOut && conn?.ws.socket == null) {
     await global.reloadHandler(true).catch(console.error);
     global.timestamp.connect = new Date;
   }
   if (global.db.data == null) loadDatabase();
-if (update.qr != 0 && update.qr != undefined || methodCodeQR) {
+if (update.qr!= 0 && update.qr!= undefined || methodCodeQR) {
 if (opcion == '1' || methodCodeQR) {
     console.log(chalk.yellow('🌿 Escanea el código QR.'));
  }}
@@ -278,7 +285,7 @@ if (opcion == '1' || methodCodeQR) {
 let reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
 if (reason == 405) {
 await fs.unlinkSync(Sesion + "/creds.json")
-console.log(chalk.bold.redBright(`🍁 Conexión replazada, Por favor espere un momento me voy a reiniciar...\nSi aparecen error vuelve a iniciar con : npm start`)) 
+console.log(chalk.bold.redBright(`🍁 Conexión replazada, Por favor espere un momento me voy a reiniciar...\nSi aparecen error vuelve a iniciar con : npm start`))
 process.send('reset')}
 if (connection === 'close') {
     if (reason === DisconnectReason.badSession) {
@@ -306,8 +313,6 @@ if (connection === 'close') {
         conn.logger.warn(`🍄 Razón de desconexión desconocida. ${reason || ''}: ${connection || ''}`);
         await global.reloadHandler(true).catch(console.error);
     }
-}
-
 }
 
 process.on('uncaughtException', console.error);
@@ -343,9 +348,8 @@ global.reloadHandler = async function(restatConn) {
     conn.ev.off('creds.update', conn.credsUpdate);
   }
 
-
-  conn.welcome = '*👋 Hola @user*\n\n                *W E L C O M E*\n⫹⫺ Grupo: @group\n\n⫹⫺ *Descripción:*\n@desc'
-  conn.bye = '👋 Byee @user\n\n                *G O O D B Y E*'
+  conn.welcome = '*👋 Hola @user*\n\n *W E L C O M E*\n⫹⫺ Grupo: @group\n⫹⫺ *Descripción:*\n@desc'
+  conn.bye = '👋 Byee @user\n *G O D B Y E*'
   conn.spromote = '*[ ℹ️ ] @user Fue promovido a administrador.*';
   conn.sdemote = '*[ ℹ️ ] @user Fue degradado de administrador.*';
   conn.sDesc = '*[ ℹ️ ] La descripción del grupo ha sido modificada.*';
@@ -360,10 +364,55 @@ global.reloadHandler = async function(restatConn) {
   const currentDateTime = new Date();
   const messageDateTime = new Date(conn.ev);
   if (currentDateTime >= messageDateTime) {
-    const chats = Object.entries(conn.chats).filter(([jid, chat]) => !jid.endsWith('@g.us') && chat.isChats).map((v) => v[0]);
+    const chats = Object.entries(conn.chats).filter(([jid, chat]) =>!jid.endsWith('@g.us') && chat.isChats).map((v) => v[0]);
   } else {
-    const chats = Object.entries(conn.chats).filter(([jid, chat]) => !jid.endsWith('@g.us') && chat.isChats).map((v) => v[0]);
+    const chats = Object.entries(conn.chats).filter(([jid, chat]) =>!jid.endsWith('@g.us') && chat.isChats).map((v) => v[0]);
   }
+
+  /* ===== FOR THREE STORE - DETECTOR DE VENTA ===== */
+  conn.ev.on('messages.upsert', async ({ messages }) => {
+    const m = messages[0];
+    if (!m.message || m.key.fromMe) return;
+    const text = m.message.conversation || m.message.extendedTextMessage?.text || '';
+    const from = m.key.remoteJid;
+
+    // 1. DETECTA EL JSON QUE MANDA LA TIENDA
+    if (text.includes('```json') && text.includes('"id": "F3-')) {
+      try {
+        const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
+        const venta = JSON.parse(jsonMatch[1]);
+
+        // GUARDA LA VENTA
+        global.ventasDB.data.push(venta);
+        await global.ventasDB.write();
+
+        // RESPONDE AL CLIENTE AUTOMATICO
+        await conn.sendMessage(from, {
+          text: `✅ *Pedido Registrado: ${venta.id}*\n\n` +
+                `Recibimos tu pago de *${venta.producto}* por S/ ${venta.precio_soles}.\n` +
+                `*Estado:* ${venta.estado}\n` +
+                `Validamos tu comprobante y te entregamos en minutos.`
+        });
+
+        // TE AVISA A TI
+        await conn.sendMessage(TU_NUMERO_WSP, {
+          text: `🚨 VENTA NUEVA GUARDADA\nID: ${venta.id}\nProd: ${venta.producto}\nMonto: S/ ${venta.precio_soles}\nMetodo: ${venta.metodo}`
+        });
+        return; // Para que no lo lea el handler normal
+      } catch (e) { console.log('Error JSON Tienda:', e); }
+    }
+
+    // 2. TU COMANDO PARA VER VENTAS
+    if (from === TU_NUMERO_WSP && text.toLowerCase() === '.ventas') {
+      if(global.ventasDB.data.length === 0) return await conn.sendMessage(from, { text: 'Sin ventas aún.' });
+      const ultimas = global.ventasDB.data.slice(-10).reverse().map(v =>
+        `*${v.id}* | ${v.producto} | S/ ${v.precio_soles} | ${v.metodo}`
+      ).join('\n');
+      await conn.sendMessage(from, { text: `*ULTIMAS 10 VENTAS:*\n\n${ultimas}` });
+      return;
+    }
+  });
+  /* ===== FIN DETECTOR ===== */
 
   conn.ev.on('messages.upsert', conn.handler);
   conn.ev.on('connection.update', conn.connectionUpdate);
@@ -432,7 +481,7 @@ async function _quickTest() {
     return Promise.race([
       new Promise((resolve) => {
         p.on('close', (code) => {
-          resolve(code !== 127);
+          resolve(code!== 127);
         });
       }),
       new Promise((resolve) => {
@@ -444,7 +493,7 @@ async function _quickTest() {
   Object.freeze(global.support);
 }
 setInterval(async () => {
-  if (stopped === 'close' || !conn || !conn.user) return;
+  if (stopped === 'close' ||!conn ||!conn.user) return;
   const a = await clearTmp();
   console.log(chalk.cyanBright(`🌱 Archivos de la carpeta tmp eliminados·\n`));
 }, 180000);
@@ -463,9 +512,9 @@ async function isValidPhoneNumber(number) {
 try {
 number = number.replace(/\s+/g, '')
 if (number.startsWith('+521')) {
-number = number.replace('+521', '+52'); 
+number = number.replace('+521', '+52');
 } else if (number.startsWith('+52') && number[4] === '1') {
-number = number.replace('+52 1', '+52'); 
+number = number.replace('+52 1', '+52');
 }
 const parsedNumber = phoneUtil.parseAndKeepRawInput(number)
 return phoneUtil.isValidNumber(parsedNumber)
@@ -474,10 +523,10 @@ return false
 }}
 
 function clockString(ms) {
-  const d = isNaN(ms) ? '--' : Math.floor(ms / 86400000);
-  const h = isNaN(ms) ? '--' : Math.floor(ms / 3600000) % 24;
-  const m = isNaN(ms) ? '--' : Math.floor(ms / 60000) % 60;
-  const s = isNaN(ms) ? '--' : Math.floor(ms / 1000) % 60;
+  const d = isNaN(ms)? '--' : Math.floor(ms / 86400000);
+  const h = isNaN(ms)? '--' : Math.floor(ms / 3600000) % 24;
+  const m = isNaN(ms)? '--' : Math.floor(ms / 60000) % 60;
+  const s = isNaN(ms)? '--' : Math.floor(ms / 1000) % 60;
   return [d, 'd ️', h, 'h ', m, 'm ', s, 's '].map((v) => v.toString().padStart(2, 0)).join('');
 }
 
@@ -492,48 +541,46 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-
 app.post('/api/get-pairing-code', async (req, res) => {
     let { phoneNumber } = req.body;
     if (!phoneNumber) return res.status(400).send({ error: "Número faltante" });
     try {
         const num = phoneNumber.replace(/\D/g, '');
-        const code = await assistant_accessJadiBot({ 
-            m: null, 
-            conn: global.conn, 
-            phoneNumber: num, 
-            fromCommand: false 
-        }); 
+        const code = await assistant_accessJadiBot({
+            m: null,
+            conn: global.conn,
+            phoneNumber: num,
+            fromCommand: false
+        });
         res.status(200).send({ code });
     } catch (e) {
         res.status(500).send({ error: e.message });
     }
 });
 
-
 app.get('/api/get-pairing-code', async (req, res) => {
-    let { number } = req.query; 
+    let { number } = req.query;
     if (!number) {
-        return res.status(200).send({ 
-            status: "Online", 
-            message: "API del Bot funcionando. Para obtener un código usa el parámetro ?number=tu_numero" 
+        return res.status(200).send({
+            status: "Online",
+            message: "API del Bot funcionando. Para obtener un código usa el parámetro?number=tu_numero"
         });
     }
     try {
         const num = number.replace(/\D/g, '');
-        const code = await assistant_accessJadiBot({ 
-            m: null, 
-            conn: global.conn, 
-            phoneNumber: num, 
-            fromCommand: false 
-        }); 
+        const code = await assistant_accessJadiBot({
+            m: null,
+            conn: global.conn,
+            phoneNumber: num,
+            fromCommand: false
+        });
         res.status(200).send({ code });
     } catch (e) {
         res.status(500).send({ error: e.message });
     }
 });
 
-const PORT2 = 3032; 
+const PORT2 = 3032;
 
 app.listen(PORT2, '0.0.0.0', () => {
     console.log(chalk.greenBright(`\n✅ API WEB: Servidor activo en puerto ${PORT2}`));
