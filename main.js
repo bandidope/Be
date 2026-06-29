@@ -81,6 +81,7 @@ global.loadDatabase = async function loadDatabase() {
     msgs: {},
     sticker: {},
     settings: {},
+    ventas: [], // <-- NUEVO: Para guardar ventas de la web
    ...(global.db.data || {}),
   };
   global.db.chain = chain(global.db.data);
@@ -109,16 +110,6 @@ global.loadChatgptDB = async function loadChatgptDB() {
   global.chatgpt.chain = lodash.chain(global.chatgpt.data);
 };
 loadChatgptDB();
-
-/* ===== FOR THREE STORE - BD VENTAS ===== */
-const TU_NUMERO_WSP = '51936994155@s.whatsapp.net'; // <-- CAMBIA TU NUMERO AQUI
-global.ventasDB = new Low(new JSONFile('./ventas.json'));
-global.loadVentasDB = async () => {
-  await global.ventasDB.read();
-  global.ventasDB.data ||= [];
-};
-await global.loadVentasDB();
-/* ===== FIN BD VENTAS ===== */
 
 global.authFile = global.Sesion
 const {state, saveState, saveCreds} = await useMultiFileAuthState(global.authFile)
@@ -149,7 +140,7 @@ opcion = '1'
 }
 if (!methodCodeQR &&!methodCode &&!fs.existsSync(`./${authFile}/creds.json`)) {
 do {
-let lineM = '⋯ ⋯ ⋯ ⋯ ⋯ 》'
+let lineM = '⋯ ⋯ 》'
 opcion = await question('🌱 Seleccione una opción :\n1. Conexión mediante código QR.\n2. onexión mediante código de 8 dígitos.\n---> ')
 if (!/^[1-2]$/.test(opcion)) {
 console.log('🌴 Por favor, seleccione solo 1 o 2.\n')
@@ -264,6 +255,39 @@ fs.watch(dirToWatchccc, (eventType, filename) => {
   }
 });
 
+// ====== INICIO CODIGO VENTAS WEB FOR THREE ======
+global.ADMIN_NUMBER = global.botNumberCode + '@s.whatsapp.net'; // Tu numero de admin
+
+async function guardarVenta(venta){
+  if(!global.db.data.ventas) global.db.data.ventas = [];
+  if(global.db.data.ventas.find(v => v.id === venta.id)) return false; // Evita duplicados
+  venta.estado = 'PENDIENTE';
+  global.db.data.ventas.push(venta);
+  await global.db.write();
+  return true;
+}
+
+async function activarVenta(id, conn){
+  const venta = global.db.data.ventas.find(v => v.id === id);
+  if(!venta) return {ok: false, msg: '❌ ID no encontrado'};
+  if(venta.estado === 'ACTIVO') return {ok: false, msg: '⚠️ Ya esta activado'};
+
+  venta.estado = 'ACTIVO';
+  await global.db.write();
+
+  // AQUI VA TU LOGICA PARA DAR EL BOT VIP 30 DIAS
+  // Ejemplo: guardar en users con 30 dias
+  const dias = venta.producto.includes('30')? 30 : 7;
+  global.db.data.users[id] = {
+    vip: true,
+    expira: Date.now() + dias * 86400000,
+    producto: venta.producto
+  };
+
+  return {ok: true, msg: `✅ ${venta.producto} activado por ${dias} dias`};
+}
+// ====== FIN CODIGO VENTAS WEB ======
+
 async function connectionUpdate(update) {
   const {connection, lastDisconnect, isNewLogin} = update;
   global.stopped = connection;
@@ -290,7 +314,6 @@ process.send('reset')}
 if (connection === 'close') {
     if (reason === DisconnectReason.badSession) {
         conn.logger.error(`🌴 Sesión incorrecta, por favor elimina la carpeta ${global.authFile} y escanea nuevamente.`);
-        //process.exit();
     } else if (reason === DisconnectReason.connectionClosed) {
         conn.logger.warn(`🌾 Conexión cerrada, reconectando...`);
         await global.reloadHandler(true).catch(console.error);
@@ -299,10 +322,8 @@ if (connection === 'close') {
         await global.reloadHandler(true).catch(console.error);
     } else if (reason === DisconnectReason.connectionReplaced) {
         conn.logger.error(`🍀 Conexión reemplazada, se ha abierto otra nueva sesión. Por favor, cierra la sesión actual primero.`);
-        //process.exit();
     } else if (reason === DisconnectReason.loggedOut) {
         conn.logger.error(`🌳 Conexion cerrada, por favor elimina la carpeta ${global.authFile} y escanea nuevamente.`);
-        //process.exit();
     } else if (reason === DisconnectReason.restartRequired) {
         conn.logger.info(`🍃 Reinicio necesario, reinicie el servidor si presenta algún problema.`);
         await global.reloadHandler(true).catch(console.error);
@@ -315,6 +336,8 @@ if (connection === 'close') {
     }
 }
 
+}
+
 process.on('uncaughtException', console.error);
 
 let isInit = true;
@@ -323,7 +346,6 @@ let handler = await import('./handler.js');
 global.reloadHandler = async function(restatConn) {
 
   try {
-
     const Handler = await import(`./handler.js?update=${Date.now()}`).catch(console.error);
     if (Object.keys(Handler || {}).length) handler = Handler;
   } catch (e) {
@@ -361,6 +383,46 @@ global.reloadHandler = async function(restatConn) {
   conn.connectionUpdate = connectionUpdate.bind(global.conn);
   conn.credsUpdate = saveCreds.bind(global.conn, true);
 
+  // ====== INICIO LECTOR JSON DE LA WEB ======
+  conn.ev.on('messages.upsert', async ({messages}) => {
+    const m = messages[0];
+    if(!m.message || m.key.fromMe) return;
+    const body = m.message.conversation || m.message.extendedTextMessage?.text || '';
+    const sender = m.key.remoteJid;
+
+    // Solo tu numero de admin puede registrar ventas
+    if(sender === global.ADMIN_NUMBER){
+
+      // 1. Detectar JSON de venta
+      if(body.includes('```json')){
+        try {
+          const jsonMatch = body.match(/```json\s*([\s\S]*?)\s*```/);
+          const venta = JSON.parse(jsonMatch[1]);
+          const ok = await guardarVenta(venta);
+          await conn.sendMessage(sender, {text: ok? `✅ Venta guardada\n*ID:* ${venta.id}\n*Producto:* ${venta.producto}\n*Monto:* S/ ${venta.precio_soles}` : `⚠️ Esa venta ya existe: ${venta.id}`});
+        } catch(e){
+          await conn.sendMessage(sender, {text: `❌ Error JSON: ${e.message}`});
+        }
+      }
+
+      // 2. Comando!ventas
+      if(body === '!ventas'){
+        const pendientes = global.db.data.ventas.filter(v => v.estado === 'PENDIENTE');
+        let txt = `📋 *VENTAS PENDIENTES: ${pendientes.length}*\n\n`;
+        pendientes.forEach(v => {txt += `*${v.id}*\n${v.producto} - S/ ${v.precio_soles}\n${v.metodo} - ${v.fecha}\n\n`});
+        await conn.sendMessage(sender, {text: txt || 'No hay ventas pendientes'});
+      }
+
+      // 3. Comando!activar F3-xxx
+      if(body.startsWith('!activar ')){
+        const id = body.split(' ')[1];
+        const res = await activarVenta(id, conn);
+        await conn.sendMessage(sender, {text: res.msg});
+      }
+    }
+  });
+  // ====== FIN LECTOR JSON ======
+
   const currentDateTime = new Date();
   const messageDateTime = new Date(conn.ev);
   if (currentDateTime >= messageDateTime) {
@@ -368,51 +430,6 @@ global.reloadHandler = async function(restatConn) {
   } else {
     const chats = Object.entries(conn.chats).filter(([jid, chat]) =>!jid.endsWith('@g.us') && chat.isChats).map((v) => v[0]);
   }
-
-  /* ===== FOR THREE STORE - DETECTOR DE VENTA ===== */
-  conn.ev.on('messages.upsert', async ({ messages }) => {
-    const m = messages[0];
-    if (!m.message || m.key.fromMe) return;
-    const text = m.message.conversation || m.message.extendedTextMessage?.text || '';
-    const from = m.key.remoteJid;
-
-    // 1. DETECTA EL JSON QUE MANDA LA TIENDA
-    if (text.includes('```json') && text.includes('"id": "F3-')) {
-      try {
-        const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
-        const venta = JSON.parse(jsonMatch[1]);
-
-        // GUARDA LA VENTA
-        global.ventasDB.data.push(venta);
-        await global.ventasDB.write();
-
-        // RESPONDE AL CLIENTE AUTOMATICO
-        await conn.sendMessage(from, {
-          text: `✅ *Pedido Registrado: ${venta.id}*\n\n` +
-                `Recibimos tu pago de *${venta.producto}* por S/ ${venta.precio_soles}.\n` +
-                `*Estado:* ${venta.estado}\n` +
-                `Validamos tu comprobante y te entregamos en minutos.`
-        });
-
-        // TE AVISA A TI
-        await conn.sendMessage(TU_NUMERO_WSP, {
-          text: `🚨 VENTA NUEVA GUARDADA\nID: ${venta.id}\nProd: ${venta.producto}\nMonto: S/ ${venta.precio_soles}\nMetodo: ${venta.metodo}`
-        });
-        return; // Para que no lo lea el handler normal
-      } catch (e) { console.log('Error JSON Tienda:', e); }
-    }
-
-    // 2. TU COMANDO PARA VER VENTAS
-    if (from === TU_NUMERO_WSP && text.toLowerCase() === '.ventas') {
-      if(global.ventasDB.data.length === 0) return await conn.sendMessage(from, { text: 'Sin ventas aún.' });
-      const ultimas = global.ventasDB.data.slice(-10).reverse().map(v =>
-        `*${v.id}* | ${v.producto} | S/ ${v.precio_soles} | ${v.metodo}`
-      ).join('\n');
-      await conn.sendMessage(from, { text: `*ULTIMAS 10 VENTAS:*\n\n${ultimas}` });
-      return;
-    }
-  });
-  /* ===== FIN DETECTOR ===== */
 
   conn.ev.on('messages.upsert', conn.handler);
   conn.ev.on('connection.update', conn.connectionUpdate);
