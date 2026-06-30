@@ -8,30 +8,23 @@ const clockString = ms => {
   return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':');
 };
 
-const saludarSegunHora = () => {
-  const hora = new Date().getHours();
-  if (hora >= 5 && hora < 12) return '🌞 ¡Buenos días!';
-  if (hora >= 12 && hora < 19) return '☀️ ¡Buenas tardes!';
-  return '🌙 ¡Buenas noches!';
-};
-
-const imgMenu = 'https://raw.githubusercontent.com/bandidope/Fotos/refs/heads/master/fotos/logo.png';
-const ORDEN_CATEGORIAS = ['freefire','info','audio','descargas','grupo']
+const imgMenu = 'https://raw.githubusercontent.com/bandidope/Fotos/refs/heads/master/fotos/logo.png'; // TU LOGO IGUAL
+const ORDEN_CATEGORIAS = ['freefire','info','audio','descargas','grupo'] // TU ORDEN IGUAL
 
 const handler = async (m, { conn, usedPrefix }) => {
   try {
-    const tag = `@${m.sender.split('@')[0]}`;
-    const saludo = saludarSegunHora();
+    const name = conn.getName(m.sender)
     const user = global.db.data.users[m.sender] || {};
     const { exp = 0, level = 1 } = user;
     const { min, xp } = xpRange(level, global.multiplier || 1);
     const totalreg = Object.keys(global.db.data.users || {}).length;
     const uptime = clockString(process.uptime() * 1000);
 
+    // 1. CATEGORIZAR COMANDOS - TUS DATOS IGUAL
     const categorizedCommands = {};
     for (const plugin of Object.values(global.plugins || {})) {
       if (plugin?.help &&!plugin.disabled) {
-        const tags = Array.isArray(plugin.tags)? plugin.tags : [plugin.tags || 'otros'];
+        const tags = Array.isArray(plugin.tags)? plugin.tags : [plugin.tags || 'misc'];
         const cmds = Array.isArray(plugin.help)? plugin.help : [plugin.help];
         const tagName = tags[0];
         if (!categorizedCommands[tagName]) categorizedCommands[tagName] = [];
@@ -39,45 +32,52 @@ const handler = async (m, { conn, usedPrefix }) => {
       }
     }
 
-    let menuText = `${saludo} ${tag} ✨\n\n`;
-    menuText += `︵᷼ ⿻ *For Three* ࣪ ࣭ ࣪ *Wa Bot* ࣭ 🌀 ࣪\n`;
-    menuText += `✿ *Hᴏʟᴀ ${tag}*\n*${saludo}*\n`;
-    menuText += `> ꒰꛱ ͜Desarrollado por *Whois Yallico* +51 936 994 155\n`;
-    menuText += `𓈒𓏸🌴 *Bot Name:* For Three Bot 🇵🇪\n`;
-    menuText += `𓈒𓏸🌵 *Nivel:* ${level} | *Exp:* ${exp - min}/${xp}\n`;
-    menuText += `𓈒𓏸🌵 *Activo:* ${uptime}\n`;
-    menuText += `𓈒𓏸🌵 *Comprar:*.precios\n`;
-    menuText += `𓈒𓏸🍃 *Usuarios:* ${totalreg}\n\n`;
-    menuText += `> 😸 Reporta errores con el Creador\n💙 Selecciona una categoría:\n`;
+    // 2. NUEVO DISEÑO - HOLO CARD - TODO CAMBIADO MENOS TUS DATOS
+    let menuText = `
+╭─「 ⚡ 𝗙𝗢𝗥 𝗧𝗛𝗥𝗘 𝗢𝗦 」─╮
+│ 
+│ 🪪 𝗨𝗦𝗘𝗥 : ${name}
+│ 🏆 𝗟𝗘𝗩𝗘𝗟 : ${level} [ ${exp - min}/${xp} XP ]
+│ 🕒 𝗢𝗡𝗟𝗜𝗡𝗘 : ${uptime}
+│ 👥 𝗨𝗦𝗘𝗥𝗦 : ${totalreg}
+│
+│ 🛠️ 𝗗𝗘𝗩 : Whois Yallico 
+│ 📱 𝗪𝗛𝗔𝗧𝗦𝗔𝗣 : +51 936 994 155
+│ 🤖 𝗩𝗘𝗥𝗦𝗜𝗢𝗡 : For Three Bot 🇵🇪
+│
+╰─「 ⚠️ Reporta bugs al Dev 」─╯
 
+> 𝗦𝗘𝗟𝗘𝗖𝗜𝗢𝗡𝗔 𝗨𝗡 𝗠𝗢𝗗𝗨𝗟𝗢 ⬇️
+`.trim();
+
+    // 3. ORDENAR CATEGORIAS - TU ORDEN IGUAL
     const categoriasOrdenadas = []
     for (const cat of ORDEN_CATEGORIAS) {
       if (categorizedCommands[cat]) {
-        categoriasOrdenadas.push([cat, categorizedCommands[cat]])
+        categoriasOrdenadas.push([cat])
         delete categorizedCommands[cat]
       }
     }
-    const resto = Object.entries(categorizedCommands).sort((a, b) => a[0].localeCompare(b[0]))
-    categoriasOrdenadas.push(...resto)
+    const resto = Object.keys(categorizedCommands).sort()
+    resto.forEach(cat => categoriasOrdenadas.push([cat]))
 
     const rows = categoriasOrdenadas.slice(0, 20).map(([category]) => ({
       id: `${usedPrefix}menu ${category}`,
-      title: ` ${category.toUpperCase()}`
+      title: `» ${category.toUpperCase()}`,
+      description: `${categorizedCommands[category]?.length || 0} comandos`
     }))
 
-    // 1. MANDAMOS LA IMAGEN PRIMERO - Método viejo que sí existe
-    await conn.sendMessage(m.chat, { image: { url: imgMenu } }, { quoted: m })
+    // 4. MANDAR IMAGEN + BOTON LISTA - METODO PANEL VIEJO
+    await conn.sendMessage(m.chat, { image: { url: imgMenu }, caption: ` }, { quoted: m }) // Imagen sola
 
-    // 2. MANDAMOS EL BOTON LISTA SIN HEADER/IMAGEN
     const msg = generateWAMessageFromContent(m.chat, {
       interactiveMessage: proto.Message.InteractiveMessage.create({
         body: proto.Message.InteractiveMessage.Body.create({ text: menuText }),
-        footer: proto.Message.InteractiveMessage.Footer.create({ text: 'For Three Bot 🇵🇪' }),
-        // header: NO LLEVA IMAGEN para que no rompa
+        footer: proto.Message.InteractiveMessage.Footer.create({ text: '© For Three OS 2026' }),
         nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
           buttons: [{
             name: "single_select",
-            buttonParamsJson: JSON.stringify({ title: "📂 Abrir Categorías", sections: [{ title: "𓈒𓏸❀ MENÚ", rows }] })
+            buttonParamsJson: JSON.stringify({ title: "⚡ Abrir Módulos", sections: [{ title: "𝗠𝗢𝗗𝗨𝗟𝗘𝗦", rows }] })
           }]
         })
       })
@@ -87,8 +87,7 @@ const handler = async (m, { conn, usedPrefix }) => {
 
   } catch (e) {
     console.error('❌ Error en el menú:', e);
-    // Fallback total
-    await conn.sendMessage(m.chat, { image: { url: imgMenu }, caption: `Error: ${e.message}`, mentions: [m.sender] }, { quoted: m });
+    await conn.reply(m.chat, `⚠️ Error: ${e.message}`, m);
   }
 };
 
