@@ -1,6 +1,5 @@
 import { xpRange } from '../lib/levelling.js';
 import { generateWAMessageFromContent, proto } from '@whiskeysockets/baileys';
-import fetch from 'node-fetch';
 
 const clockString = ms => {
   const h = isNaN(ms)? '--' : Math.floor(ms / 3600000);
@@ -30,8 +29,7 @@ const handler = async (m, { conn, usedPrefix }) => {
     const uptime = clockString(process.uptime() * 1000);
 
     const categorizedCommands = {};
-    const plugins = Object.values(global.plugins || {})
-    for (const plugin of plugins) {
+    for (const plugin of Object.values(global.plugins || {})) {
       if (plugin?.help &&!plugin.disabled) {
         const tags = Array.isArray(plugin.tags)? plugin.tags : [plugin.tags || 'otros'];
         const cmds = Array.isArray(plugin.help)? plugin.help : [plugin.help];
@@ -67,31 +65,30 @@ const handler = async (m, { conn, usedPrefix }) => {
       title: ` ${category.toUpperCase()}`
     }))
 
-    // FIX PARA PANEL VIEJO: Descargamos el buffer nosotros
-    const imgBuffer = await (await fetch(imgMenu)).buffer();
+    // 1. MANDAMOS LA IMAGEN PRIMERO - Método viejo que sí existe
+    await conn.sendMessage(m.chat, { image: { url: imgMenu } }, { quoted: m })
 
+    // 2. MANDAMOS EL BOTON LISTA SIN HEADER/IMAGEN
     const msg = generateWAMessageFromContent(m.chat, {
-      viewOnceMessage: { message: { interactiveMessage: proto.Message.InteractiveMessage.create({
+      interactiveMessage: proto.Message.InteractiveMessage.create({
         body: proto.Message.InteractiveMessage.Body.create({ text: menuText }),
         footer: proto.Message.InteractiveMessage.Footer.create({ text: 'For Three Bot 🇵🇪' }),
-        header: proto.Message.InteractiveMessage.Header.create({
-          hasMediaAttachment: true,
-          imageMessage: await conn.uploadMessage(m.chat, { image: imgBuffer }, { type: 'imageMessage' }) // <- FIX AQUI
-        }),
+        // header: NO LLEVA IMAGEN para que no rompa
         nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
           buttons: [{
             name: "single_select",
             buttonParamsJson: JSON.stringify({ title: "📂 Abrir Categorías", sections: [{ title: "𓈒𓏸❀ MENÚ", rows }] })
           }]
         })
-      })}}
+      })
     }, { userJid: conn.user.jid, quoted: m })
 
     await conn.relayMessage(m.chat, msg.message, { messageId: msg.key.id });
 
   } catch (e) {
     console.error('❌ Error en el menú:', e);
-    await conn.reply(m.chat, `⚠️ Error: ${e.message}`, m);
+    // Fallback total
+    await conn.sendMessage(m.chat, { image: { url: imgMenu }, caption: `Error: ${e.message}`, mentions: [m.sender] }, { quoted: m });
   }
 };
 
