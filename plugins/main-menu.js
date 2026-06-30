@@ -1,4 +1,5 @@
 import { xpRange } from '../lib/levelling.js';
+import { generateWAMessageFromContent, proto } from '@whiskeysockets/baileys';
 
 const clockString = ms => {
   const h = isNaN(ms)? '--' : Math.floor(ms / 3600000);
@@ -49,46 +50,58 @@ const handler = async (m, { conn, usedPrefix }) => {
       }
     }
 
-    // 3. HEADER
-    let menu = `${saludo} ${tag} ✨\n\n`;
-    menu += `︵᷼ ⿻ *For Three* ࣪ ࣭ ࣪ *Wa Bot* ࣭ 🌀 ࣪\n`;
-    menu += `✿ *Hᴏʟᴀ ${tag}*\n*${saludo}*\n`;
-    menu += `> ꒰꛱ ͜Desarrollado por *Whois Yallico* +51 936 994 155\n`;
-    menu += `𓈒𓏸🌴 *Bot Name:* For Three Bot 🇵🇪\n`;
-    menu += `𓈒𓏸🌵 *Nivel:* ${level} | *Exp:* ${exp - min}/${xp}\n`;
-    menu += `𓈒𓏸🌵 *Activo:* ${uptime}\n`;
-    menu += `𓈒𓏸🌵 *Comprar:*.precios\n`;
-    menu += `𓈒𓏸🍃 *Usuarios:* ${totalreg}\n\n`;
-    menu += `> 😸 Si encuentra un comando con errores no dudes en reportarlo con el Creador\n\n`;
+    // 3. HEADER - TU DISEÑO EXACTO
+    let menuText = `${saludo} ${tag} ✨\n\n`;
+    menuText += `︵᷼ ⿻ *For Three* ࣪ ࣭ ࣪ *Wa Bot* ࣭ 🌀 ࣪\n`;
+    menuText += `✿ *Hᴏʟᴀ ${tag}*\n*${saludo}*\n`;
+    menuText += `> ꒰꛱ ͜Desarrollado por *Whois Yallico* +51 936 994 155\n`;
+    menuText += `𓈒𓏸🌴 *Bot Name:* For Three Bot 🇵🇪\n`;
+    menuText += `𓈒𓏸🌵 *Nivel:* ${level} | *Exp:* ${exp - min}/${xp}\n`;
+    menuText += `𓈒𓏸🌵 *Activo:* ${uptime}\n`;
+    menuText += `𓈒𓏸🌵 *Comprar:*.precios\n`;
+    menuText += `𓈒𓏸🍃 *Usuarios:* ${totalreg}\n\n`;
+    menuText += `> 😸 Si encuentra un comando con errores no dudes en reportarlo con el Creador\n`;
+    menuText += `💙 Selecciona una categoría:\n`;
 
-    // 4. ORDENAR CATEGORIAS
+    // 4. ORDENAR CATEGORIAS PARA LA LISTA
     const categoriasOrdenadas = []
-
-    // Primero las que pusiste en ORDEN_CATEGORIAS
     for (const cat of ORDEN_CATEGORIAS) {
       if (categorizedCommands[cat]) {
         categoriasOrdenadas.push([cat, categorizedCommands[cat]])
-        delete categorizedCommands[cat] // las borro para no repetir
+        delete categorizedCommands[cat]
       }
     }
-
-    // Luego las que faltaron, en orden A-Z
     const resto = Object.entries(categorizedCommands).sort((a, b) => a[0].localeCompare(b[0]))
     categoriasOrdenadas.push(...resto)
 
-    // 5. IMPRIMIR MENU
-    for (const [category, cmds] of categoriasOrdenadas) {
-      if (cmds.length > 0) {
-        menu += `𓈒𓏸❀ *${category.toUpperCase()}*\n`;
-        menu += cmds.map(cmd => `│ ◦ ${cmd}`).join('\n') + '\n\n';
-      }
-    }
+    // 5. CREAR LAS ROWS PARA EL BOTON LISTA - COMO TU FOTO
+    const rows = categoriasOrdenadas.map(([category]) => ({
+      id: `${usedPrefix}menu ${category}`, // <- Al tocarlo manda.menu freefire
+      title: ` ${category.toUpperCase()}`
+    }))
 
-    await conn.sendMessage(m.chat, {
-      image: { url: imgMenu },
-      caption: menu,
-      mentions: [m.sender]
-    }, { quoted: m });
+    // 6. MANDAR IMAGEN + BOTON LISTA - 100% IPHONE/ANDROID
+    const msg = generateWAMessageFromContent(m.chat, {
+      viewOnceMessage: { message: { interactiveMessage: proto.Message.InteractiveMessage.create({
+        body: proto.Message.InteractiveMessage.Body.create({ text: menuText }),
+        footer: proto.Message.InteractiveMessage.Footer.create({ text: 'For Three Bot 🇵🇪' }),
+        header: proto.Message.InteractiveMessage.Header.create({
+          hasMediaAttachment: true,
+          imageMessage: (await conn.prepareWAMessageMedia({ image: { url: imgMenu } }, { upload: conn.waUploadToServer })).imageMessage
+        }),
+        nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
+          buttons: [{
+            name: "single_select",
+            buttonParamsJson: JSON.stringify({
+              title: "📂 Abrir Categorías",
+              sections: [{ title: "𓈒𓏸❀ MENÚ", rows: rows }]
+            })
+          }]
+        })
+      })}}
+    }, { userJid: conn.user.jid, quoted: m })
+
+    await conn.relayMessage(m.chat, msg.message, { messageId: msg.key.id });
 
   } catch (e) {
     console.error('❌ Error en el menú:', e);
