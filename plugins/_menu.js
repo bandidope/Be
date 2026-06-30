@@ -1,6 +1,6 @@
 import { xpRange } from '../lib/levelling.js';
 
-console.log('[OK] PLUGIN MENU FOR THREE V6.3 CARGADO')
+console.log('[OK] PLUGIN MENU FOR THREE V6.4 CARGADO')
 
 const clockString = ms => {
   const h = isNaN(ms)? '--' : Math.floor(ms / 3600000);
@@ -33,13 +33,13 @@ const handler = async (m, { conn, usedPrefix }) => {
 
     // 2. SALUDO SEGUN HORA
     let saludo = 'Hola'
-    let emojiHora = '🌤'
+    let emojiHora = '⚡'
     if (hora >= 5 && hora < 12) {
       saludo = 'Buenos dias'
-      emojiHora = '🌤'
+      emojiHora = '☀️'
     } else if (hora >= 12 && hora < 18) {
       saludo = 'Buenas tardes'
-      emojiHora = '☀️'
+      emojiHora = '🔥'
     } else {
       saludo = 'Buenas noches'
       emojiHora = '🌙'
@@ -57,15 +57,15 @@ const handler = async (m, { conn, usedPrefix }) => {
       }
     }
 
-    // 4. HEADER 100% FOR THREE BOT
+    // 4. HEADER IGUAL KAWAIi PERO SIN EMOJIS FEMENINOS
     let menuText = `˚₊· ✧ Menu For Three Bot ˎˊ˗
 
-♡ ${saludo} ${name} 💖 ✨
+♡ ${saludo} ${name} ⚡
 ✿-------------------------✿
-✦ ₊˚ ${saludo} ${emojiHora} 🌸 ☁️
-✦ "Tu eres mi sol, mi luna y todas mis estrellas ✨"
+✦ ₊˚ ${saludo} ${emojiHora}
+✦ "Tu eres mi sol, mi luna y todas mis estrellas"
 
-.｡*♡ Que tengas un bonito dia! 💌
+.｡*♡ Que tengas un buen dia!
 📅 ${fechaPeru}
 
 ⊹───────────────⊹
@@ -73,30 +73,30 @@ const handler = async (m, { conn, usedPrefix }) => {
 ⊹───────────────⊹
 `.trim() + '\n\n';
 
-    // 5. EMOJIS POR CATEGORIA
+    // 5. EMOJIS NUEVOS - MAS RUDOS / ANIME [SOLO CAMBIÉ ESTO]
     const emojiMap = {
-      'main': '🌹', 'menu': '🌹', 'info': '🖇️',
-      'descargas': '⚡', 'downloader': '⚡', 'audio': '💞',
-      'grupo': '💜', 'group': '💜', 'herramientas': '❣️',
-      'tools': '❣️', 'diversión': '💝', 'fun': '💝',
-      'juegos': '🕹️', 'game': '🕹️', 'rpg': '🐾',
-      'ia': '⭐', 'ai': '⭐', 'freefire': '🌷', 'ff': '🌷',
-      'frases': '💘', 'sticker': '🌼', 'stickers': '🌼',
-      'converter': '💖', 'converters': '💖', 'logo': '🩷',
-      'logos': '🩷', 'maker': '🩵', 'nsfw': '🌻',
-      'registro': '♠️', 'reg': '♠️', 'owner': '♥️',
-      'ventas': '🛒', 'search': '✨', 'ajustes': '💫',
-      'config': '💫'
+      'main': '⚡', 'menu': '⚡', 'info': '📡',
+      'descargas': '📥', 'downloader': '📥', 'audio': '🎧',
+      'grupo': '🛡️', 'group': '🛡️', 'herramientas': '🔧',
+      'tools': '🔧', 'diversión': '🎮', 'fun': '🎮',
+      'juegos': '🕹️', 'game': '🕹️', 'rpg': '🗡️',
+      'ia': '🤖', 'ai': '🤖', 'freefire': '🎯', 'ff': '🎯',
+      'frases': '💬', 'sticker': '🎴', 'stickers': '🎴',
+      'converter': '🔄', 'converters': '🔄', 'logo': '🎨',
+      'logos': '🎨', 'maker': '⚙️', 'nsfw': '🔞',
+      'registro': '📝', 'reg': '📝', 'owner': '👑',
+      'ventas': '💰', 'search': '🔍', 'ajustes': '⚙️',
+      'config': '⚙️'
     }
 
-    // 6. ORDEN DE CATEGORIAS
+    // 6. ORDEN DE CATEGORIAS - IGUAL QUE ANTES
     const ordenTags = ['menu', 'info', 'descargas', 'audio', 'grupo', 'herramientas', 'diversión', 'juegos', 'rpg', 'ia', 'freefire', 'frases', 'sticker', 'converter', 'logo', 'maker', 'registro', 'owner', 'ventas', 'search', 'ajustes', 'nsfw']
 
     const tagsOrdenados = [...ordenTags,...Object.keys(categorizedCommands).filter(t =>!ordenTags.includes(t))]
 
     for (const tag of tagsOrdenados) {
       if (categorizedCommands[tag] && categorizedCommands[tag].length > 0) {
-        const emoji = emojiMap[tag] || '✨'
+        const emoji = emojiMap[tag] || '▸'
         const nombreTag = tag.charAt(0).toUpperCase() + tag.slice(1)
         menuText += `╭┈ ❥ 「 *${nombreTag}* ${emoji}」 ┈┈ ❥\n`
         for (const cmd of categorizedCommands[tag]) {
