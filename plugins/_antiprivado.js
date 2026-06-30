@@ -1,30 +1,24 @@
+const delay = ms => new Promise(res => setTimeout(res, ms));
+
 export async function before(m, { conn, isOwner, isROwner }) {
   if (m.isBaileys && m.fromMe) return true;
   if (m.isGroup) return false; // [Solo pv]
   if (!m.message || !m.text) return true;
 
-  // [WHITELIST] Comandos permitidos al pv sin baneo
-  const allowed = ['PIEDRA'];
-  if (allowed.some(word => m.text.toUpperCase().includes(word))) return true;
+  // [WHITELIST] Si escribe esto, sí responde
+  const allowed = ['PIEDRA', 'PAPEL', 'TIJERA', 'serbot', 'jadibot', 'reglas', 'menu', 'bot', 'ford', 'info'];
+  if (allowed.some(word => m.text.toLowerCase().includes(word))) return true;
 
   const bot = global.db.data.settings[conn.user.jid] || {};
-  const linkGrupo = 'https://chat.whatsapp.com/LjPhgjqCM934QEzYz3vrVk'; // [TU LINK]
-  const imgUrl = 'https://files.evogb.win/FXbFDD.jpg'; // [TU FOTO]
+  const linkGrupo = 'https://chat.whatsapp.com/LjPhgjqCM934QEzYz3vrVk';
 
   if (bot.antiPrivate && !isOwner && !isROwner) {
-    console.log('[ANTI-PRIVADO] Bloqueando a:', m.sender);
+    await delay(3000 + Math.random()*4000); // [Delay humano 3s a 7s]
     
-    // [AVISO CON IMAGEN + LINK CLICKEABLE]
     await conn.sendMessage(m.sender, {
-      image: { url: imgUrl },
-      caption: `🚩 *AVISO IMPORTANTE*\n\nSí, si quieres comprar *For Three* únete a este grupo 👇\n${linkGrupo}\n\nNo sigas intentando porque te va a bloquear.\n\n*Guerra avisada no mata gente.*`,
-    }).catch(_ => console.log('No se pudo enviar aviso'));
-    
-    await new Promise(r => setTimeout(r, 2000)); // [2s para que lea]
-
-    // [BLOQUEO DIRECTO]
-    await conn.updateBlockStatus(m.sender, 'block'); 
-    console.log('[ANTI-PRIVADO] Bloqueado:', m.sender);
+      text: `👋 *For Three Bot*\n\nSolo atiendo por el grupo oficial bro 👇\n${linkGrupo}\n\nAquí en pv no respondo. Gracias por entender 🙏`
+    });
+    return true; // [Corta ahí. NO BLOQUEA]
   }
-  return false;
+  return true;
 }
