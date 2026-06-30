@@ -15,18 +15,9 @@ const saludarSegunHora = () => {
   return '🌙 ¡Buenas noches!';
 };
 
-// Tu logo de Vans
 const imgMenu = 'https://raw.githubusercontent.com/bandidope/Fotos/refs/heads/master/fotos/logo.png';
 
-// 1. AQUI PONES TU ORDEN - EL NOMBRE ES EL TAG DEL PLUGIN
-const ORDEN_CATEGORIAS = [
-  'freefire', // 1ro
-  'info', // 2do
-  'audio', // 3ro
-  'descargas', // 4to
-  'grupo' // 5to
-  // Las que falten salen al final en orden alfabético
-]
+const ORDEN_CATEGORIAS = ['freefire','info','audio','descargas','grupo']
 
 const handler = async (m, { conn, usedPrefix }) => {
   try {
@@ -38,9 +29,12 @@ const handler = async (m, { conn, usedPrefix }) => {
     const totalreg = Object.keys(global.db.data.users || {}).length;
     const uptime = clockString(process.uptime() * 1000);
 
-    // 2. CATEGORIZAR COMANDOS
+    // 1. CATEGORIZAR COMANDOS
     const categorizedCommands = {};
-    for (const plugin of Object.values(global.plugins)) {
+    const plugins = Object.values(global.plugins || {})
+    if(plugins.length === 0) throw new Error('global.plugins está vacío. Reinicia el bot.')
+
+    for (const plugin of plugins) {
       if (plugin?.help &&!plugin.disabled) {
         const tags = Array.isArray(plugin.tags)? plugin.tags : [plugin.tags || 'otros'];
         const cmds = Array.isArray(plugin.help)? plugin.help : [plugin.help];
@@ -50,7 +44,7 @@ const handler = async (m, { conn, usedPrefix }) => {
       }
     }
 
-    // 3. HEADER - TU DISEÑO EXACTO
+    // 2. HEADER - TU DISEÑO
     let menuText = `${saludo} ${tag} ✨\n\n`;
     menuText += `︵᷼ ⿻ *For Three* ࣪ ࣭ ࣪ *Wa Bot* ࣭ 🌀 ࣪\n`;
     menuText += `✿ *Hᴏʟᴀ ${tag}*\n*${saludo}*\n`;
@@ -60,10 +54,9 @@ const handler = async (m, { conn, usedPrefix }) => {
     menuText += `𓈒𓏸🌵 *Activo:* ${uptime}\n`;
     menuText += `𓈒𓏸🌵 *Comprar:*.precios\n`;
     menuText += `𓈒𓏸🍃 *Usuarios:* ${totalreg}\n\n`;
-    menuText += `> 😸 Si encuentra un comando con errores no dudes en reportarlo con el Creador\n`;
-    menuText += `💙 Selecciona una categoría:\n`;
+    menuText += `> 😸 Reporta errores con el Creador\n💙 Selecciona una categoría:\n`;
 
-    // 4. ORDENAR CATEGORIAS PARA LA LISTA
+    // 3. ORDENAR CATEGORIAS
     const categoriasOrdenadas = []
     for (const cat of ORDEN_CATEGORIAS) {
       if (categorizedCommands[cat]) {
@@ -74,13 +67,12 @@ const handler = async (m, { conn, usedPrefix }) => {
     const resto = Object.entries(categorizedCommands).sort((a, b) => a[0].localeCompare(b[0]))
     categoriasOrdenadas.push(...resto)
 
-    // 5. CREAR LAS ROWS PARA EL BOTON LISTA - COMO TU FOTO
-    const rows = categoriasOrdenadas.map(([category]) => ({
-      id: `${usedPrefix}menu ${category}`, // <- Al tocarlo manda.menu freefire
+    const rows = categoriasOrdenadas.slice(0, 20).map(([category]) => ({ // Max 20 para WhatsApp
+      id: `${usedPrefix}menu ${category}`,
       title: ` ${category.toUpperCase()}`
     }))
 
-    // 6. MANDAR IMAGEN + BOTON LISTA - 100% IPHONE/ANDROID
+    // 4. INTENTAR MANDAR CON BOTON LISTA
     const msg = generateWAMessageFromContent(m.chat, {
       viewOnceMessage: { message: { interactiveMessage: proto.Message.InteractiveMessage.create({
         body: proto.Message.InteractiveMessage.Body.create({ text: menuText }),
@@ -92,10 +84,7 @@ const handler = async (m, { conn, usedPrefix }) => {
         nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
           buttons: [{
             name: "single_select",
-            buttonParamsJson: JSON.stringify({
-              title: "📂 Abrir Categorías",
-              sections: [{ title: "𓈒𓏸❀ MENÚ", rows: rows }]
-            })
+            buttonParamsJson: JSON.stringify({ title: "📂 Abrir Categorías", sections: [{ title: "𓈒𓏸❀ MENÚ", rows }] })
           }]
         })
       })}}
@@ -104,8 +93,13 @@ const handler = async (m, { conn, usedPrefix }) => {
     await conn.relayMessage(m.chat, msg.message, { messageId: msg.key.id });
 
   } catch (e) {
-    console.error('❌ Error en el menú:', e);
-    await conn.reply(m.chat, `⚠️ Error al cargar el menú.`, m);
+    console.error('❌ Error en el menú con lista:', e); // <- Mira tu consola aquí
+
+    // FALLBACK: Si falla el botón, te manda el menú normal de texto + imagen
+    await conn.reply(m.chat, `⚠️ Error al cargar el menú con botones. Te mando el menú normal.\nError: ${e.message}`, m);
+
+    let menuFallback = `Menu normal...`; // Aquí va tu menú de texto viejo si quieres
+    await conn.sendMessage(m.chat, { image: { url: imgMenu }, caption: menuFallback, mentions: [m.sender] }, { quoted: m });
   }
 };
 
