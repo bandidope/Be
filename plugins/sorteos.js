@@ -1,4 +1,4 @@
-import { db } from './plugins/clientes.js'
+import { db } from './clientes.js'
 
 let handler = async (m, { conn, command, args, usedPrefix }) => {
   let jid = m.sender
