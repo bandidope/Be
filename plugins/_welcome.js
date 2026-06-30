@@ -30,15 +30,15 @@ export async function before(m, { conn }) {
     if (m.messageStubType === WAMessageStubType.GROUP_PARTICIPANT_ADD) {
       emoji = '👋';
       text = customWelcome? customWelcome.replace(/@user/gi, user).replace(/@group/gi, groupName).replace(/@desc/gi, groupDesc) : `${emoji} ${user} fue agregado a ${groupName}`;
-      audioFile = './Bienvenida.mp3';
+      audioFile = './bienvenida.mp3';
     } else if (m.messageStubType === WAMessageStubType.GROUP_PARTICIPANT_LEAVE) {
       emoji = '😭';
       text = customBye? customBye.replace(/@user/gi, user).replace(/@group/gi, groupName) : `${emoji} ${user} salió de ${groupName}`;
-      audioFile = './Despedida.mp3';
+      audioFile = './despedida.mp3';
     } else if (m.messageStubType === WAMessageStubType.GROUP_PARTICIPANT_REMOVE) {
       emoji = '❌';
       text = customKick? customKick.replace(/@user/gi, user).replace(/@group/gi, groupName) : `${emoji} ${user} fue expulsado de ${groupName}`;
-      audioFile = './Kick.mp3';
+      audioFile = './kick.mp3';
     } else return true;
 
     // 1. MENSAJE 1: IMAGEN + TEXTO
