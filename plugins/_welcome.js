@@ -30,17 +30,29 @@ export async function before(m, { conn }) {
     const groupDesc = groupMetadata.desc?.toString() || '📜 No hay descripción';
     const groupMembers = groupMetadata.participants.length;
 
-    const fixedImageUrl = 'https://files.evogb.win/FXbFDD.jpg'; // [TU LOGO]
-    const imgBuffer = await fetch(fixedImageUrl).then(res => res.buffer()).catch(_ => null);
+    const fixedImageUrl = 'https://files.evogb.win/FXbFDD.jpg'; // [TU LOGO SOLO SI NO TIENE FOTO]
+
+    // [FIX] 1. INTENTA AGARRAR LA FOTO DEL USER PRIMERO
+    let imgBuffer = null;
+    try {
+      let ppUrl = await conn.profilePictureUrl(userJid, 'image').catch(_ => null);
+      if (ppUrl) {
+        imgBuffer = await fetch(ppUrl).then(res => res.buffer()).catch(_ => null); // [SI TIENE FOTO = USA SU FOTO]
+      }
+    } catch(e){}
+
+    // [FIX] 2. SI NO TIENE FOTO O FALLÓ, USA TU LOGO
+    if (!imgBuffer) {
+      imgBuffer = await fetch(fixedImageUrl).then(res => res.buffer()).catch(_ => null); // [SI NO TIENE = TU LOGO]
+    }
 
     let text = '', audioFile = '';
 
     // [SWITCH PARA LOS 3 CASOS CON CUSTOM]
     if (m.messageStubType === WAMessageStubType.GROUP_PARTICIPANT_ADD) {
       audioFile = './bienvenida.mp3';
-      // [LEE CUSTOM O USA POR DEFECTO]
       text = chat.customWelcome
-       ? chat.customWelcome.replace(/@user/gi, user).replace(/@group/gi, groupName).replace(/@count/gi, groupMembers).replace(/@desc/gi, groupDesc)
+     ? chat.customWelcome.replace(/@user/gi, user).replace(/@group/gi, groupName).replace(/@count/gi, groupMembers).replace(/@desc/gi, groupDesc)
         : `
 ╭───────────────────╮
 │ 👋 *BIENVENIDO(A)* 👋 │
@@ -57,9 +69,8 @@ ${user} acabas de entrar a:
 
     } else if (m.messageStubType === WAMessageStubType.GROUP_PARTICIPANT_LEAVE) {
       audioFile = './despedida.mp3';
-      // [LEE CUSTOM O USA POR DEFECTO]
       text = chat.customBye
-       ? chat.customBye.replace(/@user/gi, user).replace(/@group/gi, groupName).replace(/@count/gi, groupMembers).replace(/@desc/gi, groupDesc)
+     ? chat.customBye.replace(/@user/gi, user).replace(/@group/gi, groupName).replace(/@count/gi, groupMembers).replace(/@desc/gi, groupDesc)
         : `
 ╭───────────────────╮
 │ 😭 *SE FUE* 😭 │
@@ -76,9 +87,8 @@ ${user} salió de:
 
     } else if (m.messageStubType === WAMessageStubType.GROUP_PARTICIPANT_REMOVE) {
       audioFile = './kick.mp3';
-      // [LEE CUSTOM O USA POR DEFECTO]
       text = chat.customKick
-       ? chat.customKick.replace(/@user/gi, user).replace(/@group/gi, groupName).replace(/@count/gi, groupMembers).replace(/@desc/gi, groupDesc)
+     ? chat.customKick.replace(/@user/gi, user).replace(/@group/gi, groupName).replace(/@count/gi, groupMembers).replace(/@desc/gi, groupDesc)
         : `
 ╭───────────────────╮
 │ ❌ *EXPULSADO* ❌ │
