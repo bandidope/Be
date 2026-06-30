@@ -7,16 +7,15 @@ export async function before(m, { conn }) {
   try {
     if (!m.messageStubType ||!m.isGroup) return true;
     const chat = global.db?.data?.chats?.[m.chat];
-    if (!chat ||!chat.bienvenida) return true;
-    const groupMetadata = await conn.groupMetadata(m.chat).catch(_ => null)
+    if (!chat || chat.bienvenida === false) return true;
+
+    const groupMetadata = await conn.groupMetadata(m.chat).catch(_ => null);
     if (!groupMetadata) return true;
 
-    const fixedImageUrl = 'https://files.evogb.win/FXbFDD.jpg';
+    let userJid = m.messageStubParameters?.[0];
+    if (!userJid) return true;
 
-    let userJid = m.messageStubParameters?.[0] || m.key?.participant;
-    if (!userJid) return true; 
-
-    // [FIX @lid -> @numero para que no salga @undefined]
+    // [FIX @lid -> @numero]
     let userName = userJid.split('@')[0];
     if (userJid.endsWith('@lid')) {
       try {
@@ -26,46 +25,91 @@ export async function before(m, { conn }) {
     }
     const user = `@${userName}`;
 
-    const imgBuffer = await fetch(fixedImageUrl).then(res => res.buffer()).catch(_ => null);
-    if (!imgBuffer) return true;
+    // [DATOS DEL GRUPO]
+    const groupName = groupMetadata.subject || 'Mi Grupo';
+    const groupDesc = groupMetadata.desc?.toString() || '📜 No hay descripción';
+    const groupMembers = groupMetadata.participants.length;
 
-    const groupName = groupMetadata.subject;
-    const groupDesc = groupMetadata.desc || '📜 Sin descripción disponible';
-    const { customWelcome, customBye, customKick } = chat;
+    const fixedImageUrl = 'https://files.evogb.win/FXbFDD.jpg'; // [TU LOGO]
+    const imgBuffer = await fetch(fixedImageUrl).then(res => res.buffer()).catch(_ => null);
 
     let text = '', audioFile = '', emoji = '';
+
+    // [SWITCH PARA LOS 3 CASOS]
     if (m.messageStubType === WAMessageStubType.GROUP_PARTICIPANT_ADD) {
-      emoji = '👋';
-      text = customWelcome? customWelcome.replace(/@user/gi, user).replace(/@group/gi, groupName).replace(/@desc/gi, groupDesc) : `${emoji} ${user} fue agregado a ${groupName}`;
-      audioFile = './bienvenida.mp3';
+      emoji = '👋'; audioFile = './bienvenida.mp3';
+      text = `
+╭───────────────────╮
+│ 👋 *BIENVENIDO(A)* 👋 │
+╰───────────────────╯
+
+${user} acabas de entrar a:
+
+🎮 *Grupo:* ${groupName}
+👥 *Miembros:* ${groupMembers} integrantes
+📜 *Descripción:* ${groupDesc}
+
+✨ *Pásala bien, lee las reglas y diviértete* ✨
+`.trim();
+
     } else if (m.messageStubType === WAMessageStubType.GROUP_PARTICIPANT_LEAVE) {
-      emoji = '😭';
-      text = customBye? customBye.replace(/@user/gi, user).replace(/@group/gi, groupName) : `${emoji} ${user} salió de ${groupName}`;
-      audioFile = './despedida.mp3';
+      emoji = '😭'; audioFile = './despedida.mp3';
+      text = `
+╭───────────────────╮
+│ 😭 *SE FUE* 😭 │
+╰───────────────────╯
+
+${user} salió de:
+
+🎮 *Grupo:* ${groupName}
+👥 *Quedamos:* ${groupMembers} integrantes
+📜 *Motivo:* Salió por su cuenta
+
+🕊️ *Que te vaya bien donde estés* 🕊️
+`.trim();
+
     } else if (m.messageStubType === WAMessageStubType.GROUP_PARTICIPANT_REMOVE) {
-      emoji = '❌';
-      text = customKick? customKick.replace(/@user/gi, user).replace(/@group/gi, groupName) : `${emoji} ${user} fue expulsado de ${groupName}`;
-      audioFile = './kick.mp3';
+      emoji = '❌'; audioFile = './kick.mp3';
+      text = `
+╭───────────────────╮
+│ ❌ *EXPULSADO* ❌ │
+╰───────────────────╯
+
+${user} fue expulsado de:
+
+🎮 *Grupo:* ${groupName}
+👥 *Quedamos:* ${groupMembers} integrantes
+📜 *Motivo:* Incumplió las reglas
+
+🚫 *No se toleran faltas de respeto* 🚫
+`.trim();
     } else return true;
 
-    // 1. IMAGEN
-    await conn.sendMessage(m.chat, { image: imgBuffer, caption: text, mentions: [userJid] });
+    // 1. MENSAJE 1: IMAGEN + TEXTO PRO
+    if(imgBuffer){
+      await conn.sendMessage(m.chat, { image: imgBuffer, caption: text, mentions: [userJid] });
+    } else {
+      await conn.sendMessage(m.chat, { text: text, mentions: [userJid] });
+    }
 
-    // 2. AUDIO QUE SÍ FUNCIONA
+    // 2. MENSAJE 2: AUDIO CON BARRA
     const audioPath = path.resolve(audioFile);
     if (fs.existsSync(audioPath)) {
-      await new Promise(r => setTimeout(r, 1500)); // Delay para que no se junte
+      await new Promise(r => setTimeout(r, 1500)); // Delay para que no se pegue
       const audioBuffer = fs.readFileSync(audioPath);
       await conn.sendMessage(m.chat, {
-        audio: audioBuffer, // [AUDIO NORMAL]
-        mimetype: 'audio/mpeg', // [MP3]
-        ptt: false // [BARRA + TRANSCRIBIR]
+        audio: audioBuffer,
+        mimetype: 'audio/mpeg',
+        ptt: false // [AUDIO CON BARRA + TRANSCRIBIR]
       });
-      console.log(`[WELCOME] ✅ Audio enviado y funcional: ${audioFile}`)
+      console.log(`[WELCOME] ✅ Enviado: ${audioFile}`);
     } else {
-      console.log(`[WELCOME] ❌ NO EXISTE EL AUDIO: ${audioPath}`)
+      console.log(`[WELCOME] ❌ No existe: ${audioPath}`);
     }
+
   } catch (error) {
     console.error('❌ Error en welcome:', error);
   }
 }
+
+export const disabled = false;
