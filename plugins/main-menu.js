@@ -1,5 +1,6 @@
 import { xpRange } from '../lib/levelling.js';
 import { generateWAMessageFromContent, proto } from '@whiskeysockets/baileys';
+import fetch from 'node-fetch';
 
 const clockString = ms => {
   const h = isNaN(ms)? '--' : Math.floor(ms / 3600000);
@@ -16,7 +17,6 @@ const saludarSegunHora = () => {
 };
 
 const imgMenu = 'https://raw.githubusercontent.com/bandidope/Fotos/refs/heads/master/fotos/logo.png';
-
 const ORDEN_CATEGORIAS = ['freefire','info','audio','descargas','grupo']
 
 const handler = async (m, { conn, usedPrefix }) => {
@@ -29,11 +29,8 @@ const handler = async (m, { conn, usedPrefix }) => {
     const totalreg = Object.keys(global.db.data.users || {}).length;
     const uptime = clockString(process.uptime() * 1000);
 
-    // 1. CATEGORIZAR COMANDOS
     const categorizedCommands = {};
     const plugins = Object.values(global.plugins || {})
-    if(plugins.length === 0) throw new Error('global.plugins está vacío. Reinicia el bot.')
-
     for (const plugin of plugins) {
       if (plugin?.help &&!plugin.disabled) {
         const tags = Array.isArray(plugin.tags)? plugin.tags : [plugin.tags || 'otros'];
@@ -44,7 +41,6 @@ const handler = async (m, { conn, usedPrefix }) => {
       }
     }
 
-    // 2. HEADER - TU DISEÑO
     let menuText = `${saludo} ${tag} ✨\n\n`;
     menuText += `︵᷼ ⿻ *For Three* ࣪ ࣭ ࣪ *Wa Bot* ࣭ 🌀 ࣪\n`;
     menuText += `✿ *Hᴏʟᴀ ${tag}*\n*${saludo}*\n`;
@@ -56,7 +52,6 @@ const handler = async (m, { conn, usedPrefix }) => {
     menuText += `𓈒𓏸🍃 *Usuarios:* ${totalreg}\n\n`;
     menuText += `> 😸 Reporta errores con el Creador\n💙 Selecciona una categoría:\n`;
 
-    // 3. ORDENAR CATEGORIAS
     const categoriasOrdenadas = []
     for (const cat of ORDEN_CATEGORIAS) {
       if (categorizedCommands[cat]) {
@@ -67,19 +62,21 @@ const handler = async (m, { conn, usedPrefix }) => {
     const resto = Object.entries(categorizedCommands).sort((a, b) => a[0].localeCompare(b[0]))
     categoriasOrdenadas.push(...resto)
 
-    const rows = categoriasOrdenadas.slice(0, 20).map(([category]) => ({ // Max 20 para WhatsApp
+    const rows = categoriasOrdenadas.slice(0, 20).map(([category]) => ({
       id: `${usedPrefix}menu ${category}`,
       title: ` ${category.toUpperCase()}`
     }))
 
-    // 4. INTENTAR MANDAR CON BOTON LISTA
+    // FIX PARA PANEL VIEJO: Descargamos el buffer nosotros
+    const imgBuffer = await (await fetch(imgMenu)).buffer();
+
     const msg = generateWAMessageFromContent(m.chat, {
       viewOnceMessage: { message: { interactiveMessage: proto.Message.InteractiveMessage.create({
         body: proto.Message.InteractiveMessage.Body.create({ text: menuText }),
         footer: proto.Message.InteractiveMessage.Footer.create({ text: 'For Three Bot 🇵🇪' }),
         header: proto.Message.InteractiveMessage.Header.create({
           hasMediaAttachment: true,
-          imageMessage: (await conn.prepareWAMessageMedia({ image: { url: imgMenu } }, { upload: conn.waUploadToServer })).imageMessage
+          imageMessage: await conn.uploadMessage(m.chat, { image: imgBuffer }, { type: 'imageMessage' }) // <- FIX AQUI
         }),
         nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
           buttons: [{
@@ -93,13 +90,8 @@ const handler = async (m, { conn, usedPrefix }) => {
     await conn.relayMessage(m.chat, msg.message, { messageId: msg.key.id });
 
   } catch (e) {
-    console.error('❌ Error en el menú con lista:', e); // <- Mira tu consola aquí
-
-    // FALLBACK: Si falla el botón, te manda el menú normal de texto + imagen
-    await conn.reply(m.chat, `⚠️ Error al cargar el menú con botones. Te mando el menú normal.\nError: ${e.message}`, m);
-
-    let menuFallback = `Menu normal...`; // Aquí va tu menú de texto viejo si quieres
-    await conn.sendMessage(m.chat, { image: { url: imgMenu }, caption: menuFallback, mentions: [m.sender] }, { quoted: m });
+    console.error('❌ Error en el menú:', e);
+    await conn.reply(m.chat, `⚠️ Error: ${e.message}`, m);
   }
 };
 
