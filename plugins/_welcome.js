@@ -33,12 +33,15 @@ export async function before(m, { conn }) {
     const fixedImageUrl = 'https://files.evogb.win/FXbFDD.jpg'; // [TU LOGO]
     const imgBuffer = await fetch(fixedImageUrl).then(res => res.buffer()).catch(_ => null);
 
-    let text = '', audioFile = '', emoji = '';
+    let text = '', audioFile = '';
 
-    // [SWITCH PARA LOS 3 CASOS]
+    // [SWITCH PARA LOS 3 CASOS CON CUSTOM]
     if (m.messageStubType === WAMessageStubType.GROUP_PARTICIPANT_ADD) {
-      emoji = '👋'; audioFile = './bienvenida.mp3';
-      text = `
+      audioFile = './bienvenida.mp3';
+      // [LEE CUSTOM O USA POR DEFECTO]
+      text = chat.customWelcome
+       ? chat.customWelcome.replace(/@user/gi, user).replace(/@group/gi, groupName).replace(/@count/gi, groupMembers).replace(/@desc/gi, groupDesc)
+        : `
 ╭───────────────────╮
 │ 👋 *BIENVENIDO(A)* 👋 │
 ╰───────────────────╯
@@ -53,8 +56,11 @@ ${user} acabas de entrar a:
 `.trim();
 
     } else if (m.messageStubType === WAMessageStubType.GROUP_PARTICIPANT_LEAVE) {
-      emoji = '😭'; audioFile = './despedida.mp3';
-      text = `
+      audioFile = './despedida.mp3';
+      // [LEE CUSTOM O USA POR DEFECTO]
+      text = chat.customBye
+       ? chat.customBye.replace(/@user/gi, user).replace(/@group/gi, groupName).replace(/@count/gi, groupMembers).replace(/@desc/gi, groupDesc)
+        : `
 ╭───────────────────╮
 │ 😭 *SE FUE* 😭 │
 ╰───────────────────╯
@@ -69,8 +75,11 @@ ${user} salió de:
 `.trim();
 
     } else if (m.messageStubType === WAMessageStubType.GROUP_PARTICIPANT_REMOVE) {
-      emoji = '❌'; audioFile = './kick.mp3';
-      text = `
+      audioFile = './kick.mp3';
+      // [LEE CUSTOM O USA POR DEFECTO]
+      text = chat.customKick
+       ? chat.customKick.replace(/@user/gi, user).replace(/@group/gi, groupName).replace(/@count/gi, groupMembers).replace(/@desc/gi, groupDesc)
+        : `
 ╭───────────────────╮
 │ ❌ *EXPULSADO* ❌ │
 ╰───────────────────╯
