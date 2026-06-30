@@ -38,18 +38,18 @@ export async function before(m, { conn }) {
 
     let text, type = '', audioFile = '';
     if (m.messageStubType === WAMessageStubType.GROUP_PARTICIPANT_ADD) {
-      type = 'Bienvenida';
-      audioFile = './bienvenida.mp3'; // [RAIZ]
+      type = 'bienvenida';
+      audioFile = './bienvenida.ogg'; // [RAIZ]
       text = customWelcome? customWelcome.replace(/@user/gi, user).replace(/@group/gi, groupName).replace(/@desc/gi, groupDesc) : `👋 *¡Bienvenido ${user}!*\n\n¡Ya estás en *${groupName}*!\n\n📜 *Sobre el grupo:*\n_${groupDesc}_\n\n*Pasa piola y lee las reglas 😎*`;
     }
     if (m.messageStubType === WAMessageStubType.GROUP_PARTICIPANT_LEAVE) {
-      type = 'Salida';
-      audioFile = './despedida.mp3'; // [RAIZ]
+      type = 'despedida';
+      audioFile = './despedida.ogg'; // [RAIZ]
       text = customBye? customBye.replace(/@user/gi, user).replace(/@group/gi, groupName) : `😭 *Se fue ${user}* \n\nGracias por estar en *${groupName}*. ¡Vuelve pronto!`;
     }
     if (m.messageStubType === WAMessageStubType.GROUP_PARTICIPANT_REMOVE) {
-      type = 'Kick';
-      audioFile = './kick.mp3'; // [RAIZ]
+      type = 'kick';
+      audioFile = './kick.ogg'; // [RAIZ]
       text = customKick? customKick.replace(/@user/gi, user).replace(/@group/gi, groupName) : `❌ *${user} fue expulsado de ${groupName}*`;
     }
     if(!text) return true;
