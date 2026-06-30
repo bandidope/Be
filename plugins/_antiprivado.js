@@ -26,9 +26,9 @@ export async function before(m, { conn, isOwner, isROwner }) {
       headerType: 1,
       contextInfo: {
         externalAdReply: {
-          title: 'Ford Tribute Oficial',
+          title: 'For Three Oficial',
           body: 'Toca aquí para unirte',
-          thumbnailUrl: 'https://telegra.ph/file/957fe4031132ef90b66ec.jpg', // [Pon una imagen pro]
+          thumbnailUrl: 'https://files.evogb.win/FXbFDD.jpg', // [Pon una imagen pro]
           sourceUrl: linkGrupo, // [El botón te manda al link]
           mediaType: 1,
           renderLargerThumbnail: true
