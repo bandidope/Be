@@ -24,12 +24,25 @@ const handler = async (m, { conn, text, command, isAdmin, isOwner }) => {
 
         // Guarda el mensaje personalizado en la base de datos del chat
         chat.customWelcome = text.trim();
-        m.reply(`✅ El mensaje de bienvenida personalizado ha sido establecido con éxito.`);
+        
+        // [BOTÓN NUEVO] Para quitar la editada al toque
+        let buttons = [
+            {buttonId: '.delwelcome', buttonText: {displayText: '🗑️ Quitar editada'}, type: 1}
+        ];
+        
+        await conn.sendButtonMessage(m.chat, {
+            text: `✅ *El mensaje de bienvenida personalizado ha sido establecido con éxito.*\n\n\`\`${text.trim()}\`\``,
+            footer: 'Toca el botón de abajo para volver al mensaje por defecto',
+            buttons: buttons,
+            headerType: 1
+        }, { quoted: m });
 
     } else if (command === 'delwelcome') {
+        if (!chat.customWelcome) return m.reply('⚠️ No tienes una bienvenida editada para quitar.');
+        
         // Borra el mensaje personalizado
-        chat.customWelcome = null;
-        m.reply('✅ El mensaje de bienvenida personalizado ha sido eliminado. Ahora se usará el mensaje predeterminado.');
+        delete chat.customWelcome; // [MEJOR QUE NULL]
+        m.reply('✅ *Listo*\n\nEl mensaje de bienvenida personalizado ha sido eliminado.\nAhora se usará el mensaje predeterminado de tu `welcome.js`.');
     }
 };
 
