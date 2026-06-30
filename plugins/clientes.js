@@ -1,59 +1,49 @@
 import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 dotenv.config()
-
 await mongoose.connect(process.env.MONGO_URL, { dbName: 'forbotDB' })
-console.log('✅ Mongo Conectado')
+console.log('✅ Mongo Clientes OK')
 
-const clienteSchema = new mongoose.Schema({
-  jid: { type: String, unique: true },
+const Cliente = mongoose.model('Cliente', new mongoose.Schema({
+  telefono: { type: String, unique: true },
   nombre: String,
-  compras: { type: Number, default: 0 },
-  gastoTotal: { type: Number, default: 0 },
-  fechaRegistro: { type: Date, default: Date.now }
-})
-const sorteoSchema = new mongoose.Schema({
-  codigo: { type: String, unique: true },
-  premio: String,
-  participantes: [String],
-  fechaCreacion: { type: Date, default: Date.now }
-})
+  grupo: String,
+  fechaCompra: Date
+}))
 
-const Cliente = mongoose.model('Cliente', clienteSchema)
-const Sorteo = mongoose.model('Sorteo', sorteoSchema)
+let handler = async (m, { command, args }) => {
+  let texto = args.join(' ')
 
-export const db = {
-  registrarCliente: async (jid, nombre) => {
-    return await Cliente.findOneAndUpdate({ jid }, { jid, nombre }, { upsert: true, new: true })
-  },
-  getCliente: async (jid) => await Cliente.findOne({ jid }),
-  sumarCompra: async (jid, monto) => {
-    return await Cliente.findOneAndUpdate({ jid }, { $inc: { compras: 1, gastoTotal: monto } }, { new: true })
-  },
-  crearSorteo: async (codigo, premio) => {
-    return await Sorteo.create({ codigo, premio, participantes: [] })
-  },
-  participarSorteo: async (codigo, jid) => {
-    return await Sorteo.findOneAndUpdate({ codigo }, { $addToSet: { participantes: jid } }, { new: true })
+  if (command === 'addcliente') {
+    // Formato: .addcliente Nombre - Grupo - Telefono - Fecha
+    let [nombre, grupo, telefono, fecha] = texto.split('-').map(s => s.trim())
+    if (!telefono || !nombre) return m.reply('Uso: .addcliente Nombre - Grupo - Telefono - Fecha\nEj: .addcliente Juan Perez - Grupo A - 51987654321 - 05/10/2025')
+    
+    await Cliente.findOneAndUpdate({ telefono }, { 
+      nombre, 
+      grupo, 
+      fechaCompra: new Date(fecha.split('/').reverse().join('-')) 
+    }, { upsert: true })
+    
+    return m.reply(`✅ Cliente guardado/actualizado\n*${nombre}* | ${grupo} | ${telefono}`)
+  }
+
+  if (command === 'clientes') {
+    let lista = await Cliente.find({}).sort({ fechaCompra: -1 })
+    if (lista.length === 0) return m.reply('❌ No tienes clientes registrados aún')
+    
+    let msg = `*👥 LISTA DE CLIENTES | TOTAL: ${lista.length}*\n`
+    msg += `━━━━━━━━━━\n\n`
+    
+    lista.forEach((c, i) => {
+      let fecha = c.fechaCompra.toLocaleDateString('es-PE')
+      msg += `*${i+1}. ${c.nombre}*\n`
+      msg += `   📌 Grupo: ${c.grupo}\n`
+      msg += `   📱 Tel: ${c.telefono}\n`
+      msg += `   📅 Fecha: ${fecha}\n\n`
+    })
+    return m.reply(msg.trim())
   }
 }
-
-// === PLUGIN DENTRO DEL MISMO ARCHIVO ===
-let handler = async (m, { conn, command, args, usedPrefix }) => {
-  let jid = m.sender
-  let nombre = conn.getName(jid)
-
-  if (command === 'registrar') {
-    await db.registrarCliente(jid, nombre)
-    await db.sumarCompra(jid, 1)
-    let user = await db.getCliente(jid)
-    m.reply(`✅ Registrado ${nombre}\nCompras: ${user.compras}\nGasto: S/. ${user.gastoTotal}`)
-  }
-  if (command === 'perfil') {
-    let user = await db.getCliente(jid)
-    if (!user) return m.reply('❌ Usa.registrar primero')
-    m.reply(`👤 *PERFIL*\nNombre: ${user.nombre}\nCompras: ${user.compras}\nGasto: S/. ${user.gastoTotal}`)
-  }
-}
-handler.command = ['registrar', 'perfil']
+handler.command = ['addcliente', 'clientes']
 export default handler
