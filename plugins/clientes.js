@@ -15,35 +15,28 @@ let handler = async (m, { command, args }) => {
   let texto = args.join(' ')
 
   if (command === 'addcliente') {
-    // Formato: .addcliente Nombre - Grupo - Telefono - Fecha
     let [nombre, grupo, telefono, fecha] = texto.split('-').map(s => s.trim())
-    if (!telefono || !nombre) return m.reply('Uso: .addcliente Nombre - Grupo - Telefono - Fecha\nEj: .addcliente Juan Perez - Grupo A - 51987654321 - 05/10/2025')
-    
-    await Cliente.findOneAndUpdate({ telefono }, { 
-      nombre, 
-      grupo, 
-      fechaCompra: new Date(fecha.split('/').reverse().join('-')) 
-    }, { upsert: true })
-    
-    return m.reply(`✅ Cliente guardado/actualizado\n*${nombre}* | ${grupo} | ${telefono}`)
+    if (!telefono) return m.reply('Uso:.addcliente Nombre - Grupo - Telefono - Fecha')
+    await Cliente.findOneAndUpdate({ telefono }, { nombre, grupo, fechaCompra: new Date(fecha.split('/').reverse().join('-')) }, { upsert: true })
+    return m.reply(`✅ ${nombre} guardado`)
   }
 
   if (command === 'clientes') {
     let lista = await Cliente.find({}).sort({ fechaCompra: -1 })
-    if (lista.length === 0) return m.reply('❌ No tienes clientes registrados aún')
+    if (!lista.length) return m.reply('❌ Sin clientes')
+    let msg = `*👥 CLIENTES: ${lista.length}*\n━━━━━━━━━━\n\n` +
+      lista.map((c, i) => `*${i+1}. ${c.nombre}*\n 📌 ${c.grupo} | 📱 ${c.telefono} | 📅 ${c.fechaCompra.toLocaleDateString('es-PE')}`).join('\n\n')
+    return m.reply(msg)
+  }
+
+  if (command === 'delcliente') {
+    // .delcliente Juan Perez
+    let nombreABorrar = texto
+    if (!nombreABorrar) return m.reply('Uso: .delcliente Nombre Completo')
     
-    let msg = `*👥 LISTA DE CLIENTES | TOTAL: ${lista.length}*\n`
-    msg += `━━━━━━━━━━\n\n`
-    
-    lista.forEach((c, i) => {
-      let fecha = c.fechaCompra.toLocaleDateString('es-PE')
-      msg += `*${i+1}. ${c.nombre}*\n`
-      msg += `   📌 Grupo: ${c.grupo}\n`
-      msg += `   📱 Tel: ${c.telefono}\n`
-      msg += `   📅 Fecha: ${fecha}\n\n`
-    })
-    return m.reply(msg.trim())
+    let res = await Cliente.deleteOne({ nombre: new RegExp(`^${nombreABorrar}$`, 'i') }) // i = no importa mayusculas
+    return m.reply(res.deletedCount? `🗑️ Cliente "${nombreABorrar}" eliminado. Como si nunca existió.` : `❌ No encontré a "${nombreABorrar}"`)
   }
 }
-handler.command = ['addcliente', 'clientes']
+handler.command = ['addcliente', 'clientes', 'delcliente']
 export default handler
