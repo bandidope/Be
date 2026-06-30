@@ -1,6 +1,6 @@
 import { xpRange } from '../lib/levelling.js';
 
-console.log('[OK] PLUGIN MENU FOR THREE V6.1 CARGADO')
+console.log('[OK] PLUGIN MENU FOR THREE V6.3 CARGADO')
 
 const clockString = ms => {
   const h = isNaN(ms)? '--' : Math.floor(ms / 3600000);
@@ -20,7 +20,32 @@ const handler = async (m, { conn, usedPrefix }) => {
     const totalreg = Object.keys(global.db.data.users || {}).length;
     const uptime = clockString(process.uptime() * 1000);
 
-    // 1. AGRUPAR COMANDOS POR TAG REALES DEL BOT
+    // 1. HORA Y FECHA DE LIMA, PERU
+    const fechaPeru = new Date().toLocaleDateString('es-PE', {
+      timeZone: 'America/Lima',
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const horaPeru = new Date().toLocaleString('en-US', { timeZone: 'America/Lima' });
+    const hora = new Date(horaPeru).getHours();
+
+    // 2. SALUDO SEGUN HORA
+    let saludo = 'Hola'
+    let emojiHora = '🌤'
+    if (hora >= 5 && hora < 12) {
+      saludo = 'Buenos dias'
+      emojiHora = '🌤'
+    } else if (hora >= 12 && hora < 18) {
+      saludo = 'Buenas tardes'
+      emojiHora = '☀️'
+    } else {
+      saludo = 'Buenas noches'
+      emojiHora = '🌙'
+    }
+
+    // 3. AGRUPAR COMANDOS POR TAG REALES DEL BOT
     const categorizedCommands = {};
     for (const plugin of Object.values(global.plugins || {})) {
       if (plugin?.help &&!plugin.disabled) {
@@ -32,22 +57,23 @@ const handler = async (m, { conn, usedPrefix }) => {
       }
     }
 
-    // 2. HEADER 100% FOR THREE BOT - ESTILO KAWAIi
+    // 4. HEADER 100% FOR THREE BOT
     let menuText = `˚₊· ✧ Menu For Three Bot ˎˊ˗
 
-♡ Bienvenido ${name} 💖 ✨
+♡ ${saludo} ${name} 💖 ✨
 ✿-------------------------✿
-✦ ₊˚ Lindo Dia 🌤 🌸 ☁️
+✦ ₊˚ ${saludo} ${emojiHora} 🌸 ☁️
 ✦ "Tu eres mi sol, mi luna y todas mis estrellas ✨"
 
 .｡*♡ Que tengas un bonito dia! 💌
+📅 ${fechaPeru}
 
 ⊹───────────────⊹
        ˚⊱ ♡ Comandos ♡ ⊰˚
 ⊹───────────────⊹
 `.trim() + '\n\n';
 
-    // 3. EMOJIS POR CATEGORIA - IGUAL QUE NUBECITA
+    // 5. EMOJIS POR CATEGORIA
     const emojiMap = {
       'main': '🌹', 'menu': '🌹', 'info': '🖇️',
       'descargas': '⚡', 'downloader': '⚡', 'audio': '💞',
@@ -63,7 +89,7 @@ const handler = async (m, { conn, usedPrefix }) => {
       'config': '💫'
     }
 
-    // 4. ORDEN DE CATEGORIAS BONITO
+    // 6. ORDEN DE CATEGORIAS
     const ordenTags = ['menu', 'info', 'descargas', 'audio', 'grupo', 'herramientas', 'diversión', 'juegos', 'rpg', 'ia', 'freefire', 'frases', 'sticker', 'converter', 'logo', 'maker', 'registro', 'owner', 'ventas', 'search', 'ajustes', 'nsfw']
 
     const tagsOrdenados = [...ordenTags,...Object.keys(categorizedCommands).filter(t =>!ordenTags.includes(t))]
@@ -80,11 +106,11 @@ const handler = async (m, { conn, usedPrefix }) => {
       }
     }
 
-    // 5. FOOTER 100% TUYO
+    // 7. FOOTER 100% TUYO
     menuText += `> ⏤͟͞ For Three Bot by Whois Yallico ⚡\n`
     menuText += `> Contacto: +51 936 994 155`
 
-    // 6. ENVIAR 1 SOLO MENSAJE
+    // 8. ENVIAR
     await conn.sendMessage(m.chat, {
       image: { url: imgMenu },
       caption: menuText,
