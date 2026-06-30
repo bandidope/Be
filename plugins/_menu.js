@@ -1,6 +1,6 @@
 import { xpRange } from '../lib/levelling.js';
 
-console.log('[OK] PLUGIN MENU V4 CARGADO')
+console.log('[OK] PLUGIN MENU FOR THREE V6.1 CARGADO')
 
 const clockString = ms => {
   const h = isNaN(ms)? '--' : Math.floor(ms / 3600000);
@@ -20,50 +20,76 @@ const handler = async (m, { conn, usedPrefix }) => {
     const totalreg = Object.keys(global.db.data.users || {}).length;
     const uptime = clockString(process.uptime() * 1000);
 
-    // 1. JUNTAR TODOS LOS COMANDOS EN 1 SOLA LISTA
-    const allCommands = [];
+    // 1. AGRUPAR COMANDOS POR TAG REALES DEL BOT
+    const categorizedCommands = {};
     for (const plugin of Object.values(global.plugins || {})) {
       if (plugin?.help &&!plugin.disabled) {
+        const tags = Array.isArray(plugin.tags)? plugin.tags : [plugin.tags || 'misc'];
         const cmds = Array.isArray(plugin.help)? plugin.help : [plugin.help];
-        cmds.forEach(cmd => allCommands.push(usedPrefix + cmd));
+        const tagName = tags[0];
+        if (!categorizedCommands[tagName]) categorizedCommands[tagName] = [];
+        cmds.forEach(cmd => categorizedCommands[tagName].push(`${usedPrefix}${cmd}`));
       }
     }
-    allCommands.sort(); // Orden alfabético
 
-    // 2. NUEVO DISEÑO - TIPO "TERMINAL HACKER" - 100% DIFERENTE
-    let menuText = `
-[=================================================]
-||                                               ||
-||  >> FOR_THREE_OS v4.0 // ONLINE              ||
-||                                               ||
-||  [USER]    > ${name}                          ||
-||  [LEVEL]   > ${level} [${exp - min}/${xp}]    ||
-||  [UPTIME]  > ${uptime}                        ||
-||  [USERS]   > ${totalreg}                      ||
-||                                               ||
-||  [DEV]     > Whois Yallico                    ||
-||  [PHONE]   > +51 936 994 155                  ||
-||  [BOT]     > For Three Bot PE                 ||
-||                                               ||
-[=================================================]
+    // 2. HEADER 100% FOR THREE BOT - ESTILO KAWAIi
+    let menuText = `˚₊· ✧ Menu For Three Bot ˎˊ˗
 
->> LISTA DE COMANDOS ACTIVOS [${allCommands.length}] <<
+♡ Bienvenido ${name} 💖 ✨
+✿-------------------------✿
+✦ ₊˚ Lindo Dia 🌤 🌸 ☁️
+✦ "Tu eres mi sol, mi luna y todas mis estrellas ✨"
 
-${allCommands.map((v, i) => `${String(i+1).padStart(2, '0')}. ${v}`).join('\n')}
+.｡*♡ Que tengas un bonito dia! 💌
 
-[=================================================]
->> Reporta bugs al DEV <<
-[=================================================]
-`.trim();
+⊹───────────────⊹
+       ˚⊱ ♡ Comandos ♡ ⊰˚
+⊹───────────────⊹
+`.trim() + '\n\n';
 
-    // 3. MANDAR SOLO 1 MENSAJE: IMAGEN + CAPTION GIGANTE
-    await conn.sendMessage(m.chat, { 
-      image: { url: imgMenu }, 
+    // 3. EMOJIS POR CATEGORIA - IGUAL QUE NUBECITA
+    const emojiMap = {
+      'main': '🌹', 'menu': '🌹', 'info': '🖇️',
+      'descargas': '⚡', 'downloader': '⚡', 'audio': '💞',
+      'grupo': '💜', 'group': '💜', 'herramientas': '❣️',
+      'tools': '❣️', 'diversión': '💝', 'fun': '💝',
+      'juegos': '🕹️', 'game': '🕹️', 'rpg': '🐾',
+      'ia': '⭐', 'ai': '⭐', 'freefire': '🌷', 'ff': '🌷',
+      'frases': '💘', 'sticker': '🌼', 'stickers': '🌼',
+      'converter': '💖', 'converters': '💖', 'logo': '🩷',
+      'logos': '🩷', 'maker': '🩵', 'nsfw': '🌻',
+      'registro': '♠️', 'reg': '♠️', 'owner': '♥️',
+      'ventas': '🛒', 'search': '✨', 'ajustes': '💫',
+      'config': '💫'
+    }
+
+    // 4. ORDEN DE CATEGORIAS BONITO
+    const ordenTags = ['menu', 'info', 'descargas', 'audio', 'grupo', 'herramientas', 'diversión', 'juegos', 'rpg', 'ia', 'freefire', 'frases', 'sticker', 'converter', 'logo', 'maker', 'registro', 'owner', 'ventas', 'search', 'ajustes', 'nsfw']
+
+    const tagsOrdenados = [...ordenTags,...Object.keys(categorizedCommands).filter(t =>!ordenTags.includes(t))]
+
+    for (const tag of tagsOrdenados) {
+      if (categorizedCommands[tag] && categorizedCommands[tag].length > 0) {
+        const emoji = emojiMap[tag] || '✨'
+        const nombreTag = tag.charAt(0).toUpperCase() + tag.slice(1)
+        menuText += `╭┈ ❥ 「 *${nombreTag}* ${emoji}」 ┈┈ ❥\n`
+        for (const cmd of categorizedCommands[tag]) {
+          menuText += `│${emoji} ${cmd}\n`
+        }
+        menuText += `╰┄┈┄❥┈\n\n`
+      }
+    }
+
+    // 5. FOOTER 100% TUYO
+    menuText += `> ⏤͟͞ For Three Bot by Whois Yallico ⚡\n`
+    menuText += `> Contacto: +51 936 994 155`
+
+    // 6. ENVIAR 1 SOLO MENSAJE
+    await conn.sendMessage(m.chat, {
+      image: { url: imgMenu },
       caption: menuText,
       mentions: [m.sender]
     }, { quoted: m })
-
-    console.log(`[OK] Menu enviado con ${allCommands.length} comandos`)
 
   } catch (e) {
     console.error('[ERROR] MENU:', e);
