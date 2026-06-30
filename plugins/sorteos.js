@@ -1,4 +1,4 @@
-import { db } from './clientes.js'
+import { db } from '../plugins/clientes.js' // <-- OJO: Sube 1 carpeta
 
 let handler = async (m, { conn, command, args, usedPrefix }) => {
   let jid = m.sender
@@ -7,24 +7,24 @@ let handler = async (m, { conn, command, args, usedPrefix }) => {
   switch (command) {
     case 'registrar': {
       await db.registrarCliente(jid, nombre)
-      await db.sumarCompra(jid, 1) // simulamos 1 sol de compra
+      await db.sumarCompra(jid, 1)
       let user = await db.getCliente(jid)
-      m.reply(`✅ Registrado ${nombre}\nCompras: ${user.compras}\nGasto Total: S/. ${user.gastoTotal}\n\n*Reinicia el bot y prueba .perfil*`)
+      m.reply(`✅ Registrado ${nombre}\nCompras: ${user.compras}\nGasto Total: S/. ${user.gastoTotal}\n\n*Reinicia y prueba.perfil*`)
       break
     }
     case 'perfil': {
       let user = await db.getCliente(jid)
-      if (!user) return m.reply('❌ No estás registrado. Usa .registrar primero')
-      m.reply(`👤 *PERFIL ANTI-REINICIO*\n\nNombre: ${user.nombre}\nCompras: ${user.compras}\nGasto Total: S/. ${user.gastoTotal}\nFecha: ${user.fechaRegistro.toLocaleDateString('es-PE')}`)
+      if (!user) return m.reply('❌ No estás registrado. Usa.registrar primero')
+      m.reply(`👤 *PERFIL ANTI-REINICIO*\n\nNombre: ${user.nombre}\nCompras: ${user.compras}\nGasto Total: S/. ${user.gastoTotal}`)
       break
     }
     case 'sorteo': {
-      if (!args[0]) return m.reply(`Uso: ${usedPrefix}sorteo crear CODIGO|PREMIO\nEj: ${usedPrefix}sorteo crear SORTEO1|Audifonos`)
+      if (!args[0]) return m.reply(`Uso: ${usedPrefix}sorteo crear CODIGO|PREMIO`)
       let [tipo, data] = args[0].split(' ')
       if (tipo === 'crear') {
         let [codigo, premio] = data.split('|')
         await db.crearSorteo(codigo, premio)
-        m.reply(`🎉 Sorteo creado: *${codigo}*\nPremio: ${premio}\nUsa .sorteo participar ${codigo}`)
+        m.reply(`🎉 Sorteo creado: *${codigo}*\nPremio: ${premio}`)
       }
       if (tipo === 'participar') {
         let codigo = data
