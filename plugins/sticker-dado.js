@@ -1,29 +1,25 @@
-let handler = async (m, { conn, usedPrefix }) => {
-  // [1. TIRA EL DADO] Numero del 1 al 6
-  let dado = Math.floor(Math.random() * 6) + 1
-
-  // [2. STICKERS DE DADO] Links directos de stickers animados
-  let stickers = {
-    1: 'https://dl.stickers.sm/Dados/1.webp',
-    2: 'https://dl.stickers.sm/Dados/2.webp',
-    3: 'https://dl.stickers.sm/Dados/3.webp',
-    4: 'https://dl.stickers.sm/Dados/4.webp',
-    5: 'https://dl.stickers.sm/Dados/5.webp',
-    6: 'https://dl.stickers.sm/Dados/6.webp',
-  }
-
-  let url = stickers[dado]
-
-  // [3. MANDAR STICKER]
+let handler = async (m, { conn }) => {
+  // [1. TIRA EL DADO]
+  let numero = Math.floor(Math.random() * 6) + 1
+  
+  // [2. REACCIONA A TU MENSAJE CON EL DADO]
   await conn.sendMessage(m.chat, {
-    sticker: { url },
-    // [Texto que sale encima del sticker]
-  }, { quoted: m })
+    react: { 
+      text: '🎲', 
+      key: m.key 
+    }
+  })
 
-  await m.reply(`🎲 Te salió: *${dado}*`)
+  // [3. MANDA EL TEXTO CON EL NUMERO]
+  let texto = `🎲 *DADO* 🎲\n\nTe tocó el: *${numero}*`
+  
+  if (numero === 6) texto += '\n\n🔥 *CRÍTICO!*'
+  if (numero === 1) texto += '\n\n💀 *F*'
+
+  await conn.reply(m.chat, texto, m)
 }
 
 handler.help = ['dado']
 handler.tags = ['diversion']
-handler.command = /^(dado|dice)$/i
+handler.command = /^(dado|dice|roll)$/i
 export default handler
