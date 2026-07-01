@@ -1,60 +1,67 @@
-const os = require('os');
-const { execSync } = require('child_process');
-
-const formatBytes = (bytes, decimals = 2) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const dm = decimals < 0? 0 : decimals;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' + sizes[i];
-};
+import os from 'os';
+import process from 'process';
 
 let handler = async (m, { conn }) => {
-    // Anti-crash: Si algo falla, el bot no se cae
-    try {
-        const totalMem = os.totalmem();
-        const freeMem = os.freem();
-        const usedMem = totalMem - freeMem;
-        const uptime = process.uptime() * 1000;
-        const h = Math.floor(uptime / 3600000);
-        const min = Math.floor(uptime / 60000) % 60;
-        const sec = Math.floor(uptime / 1000) % 60;
+  const used = process.memoryUsage();
+  const totalMem = os.totalmem();
+  const freeMem = os.freemem();
+  const platform = os.platform();
+  const arch = os.arch();
+  const uptime = process.uptime();
+  const cpus = os.cpus();
+  const load = os.loadavg();
 
-        // FIX: df compatible con Termux + VPS + Linux
-        let disk = 'N/A';
-        try {
-            const df = execSync('df -h / | tail -1').toString().trim().split(/\s+/);
-            disk = `${df[1]} | Usado: ${df[2]} | ${df[4]}`;
-        } catch {}
+  const format = (bytes) => {
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    if (bytes === 0) return '0 Byte';
+    const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+    return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
+  };
 
-        const txt = `*✅ ESTADO DEL SISTEMA*
+  const formatTime = (secs) => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = Math.floor(secs % 60);
+    return `${h}h ${m}m ${s}s`;
+  };
 
-*🚩 Host:* ${os.hostname()}
-*🏆 OS:* ${os.platform()} ${os.arch()}
-*🕒 Uptime:* ${h}h ${min}m ${sec}s
+  // Calcular el porcentaje de uso de CPU (promedio de todos los núcleos)
+  const cpuUsagePercent = cpus.map(cpu => {
+    const total = Object.values(cpu.times).reduce((acc, tv) => acc + tv, 0);
+    const idle = cpu.times.idle;
+    return 100 - (100 * idle / total);
+  });
 
-*💾 RAM Servidor:*
-> Total: ${formatBytes(totalMem)}
-> Libre: ${formatBytes(freeMem)}
-> Usada: ${formatBytes(usedMem)}
+  const avgCpuUsage = (cpuUsagePercent.reduce((a, b) => a + b, 0) / cpuUsagePercent.length).toFixed(2);
 
-*🪴 RAM NodeJS:*
-> Heap: ${formatBytes(process.memoryUsage().heapUsed)} / ${formatBytes(process.memoryUsage().heapTotal)}
+  const cpuModel = cpus[0].model;
+  const cpuSpeed = cpus[0].speed;
+  const cores = cpus.length;
 
-*☁️ Disco:* ${disk}`;
+  const message = `
+🖥️ *Estado del Bot*
 
-        await m.reply(txt);
+🔹 Plataforma: ${platform} ${arch}
+🔹 CPU: ${cpuModel}
+🔹 Núcleos: ${cores} @ ${cpuSpeed} MHz
+🔹 Uso CPU: ${avgCpuUsage}%
+🔹 Uptime: ${formatTime(uptime)}
 
-    } catch (e) {
-        await m.reply('❌ Error al obtener datos: ' + e.message);
-    }
+💾 Memoria usada: ${format(used.rss)}
+💾 Memoria libre: ${format(freeMem)}
+💾 Memoria total: ${format(totalMem)}
+
+⚙️ Carga del sistema:
+   • 1 min: ${load[0].toFixed(2)}
+   • 5 min: ${load[1].toFixed(2)}
+   • 15 min: ${load[2].toFixed(2)}
+`.trim();
+
+  m.reply(message);
 };
 
-handler.command = ['sistema', 'system', 'status', 'ping'];
+handler.help = ['status', 'estado'];
 handler.tags = ['info'];
-handler.help = ['sistema'];
-handler.register = false; // CLAVE PA BE
-handler.limit = false;
+handler.command =['status', 'estado'];
 
-module.exports = handler;
+export default handler;
