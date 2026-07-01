@@ -1,26 +1,18 @@
-let handler = async (m, { conn, text, usedPrefix, command }) => {
-    // Determinamos quién es el objetivo (mención, respuesta o texto)
-    let who = m.mentionedJid && m.mentionedJid[0] ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null;
+let handler = async (m, { conn, mentionedJid }) => {
+  if (!mentionedJid?.[0]) return m.reply('Taggea a tu víctima: `.adoptado @user`')
 
-    // Si no se encuentra a nadie, enviamos el ejemplo de uso
-    if (!who) return conn.reply(m.chat, `*Etiqueta a un therian para ganar la partida.*\n\nEjemplo: ${usedPrefix + command} @usuario`, m);
+  let quien = mentionedJid[0] // ej: 254417471316137@s.whatsapp.net
+  let numero = quien.split('@')[0] // ej: 254417471316137
 
-    // Obtenemos el nombre del usuario de forma segura
-    let user = global.db.data.users[who]
-    let name = user ? user.name : await conn.getName(who);
+  // ARREGLO: El @ va pegado al numero SIN el +
+  let texto = `@${numero} *ES/IS* *%* *ADOPTADO*\n_Sus padres se fueron x pañales 😞😂_`
 
-    // El mensaje final con el nombre y el texto que pediste
-    let mensaje = `*te haz follado un therian y lo fuiste a tirar al río con sus amigos los lagartos easy win🦎🏆*`;
-
-    // Enviamos el mensaje con la mención activa
-    await conn.sendMessage(m.chat, { 
-        text: mensaje, 
-        mentions: [who] 
-    }, { quoted: m });
+  await conn.sendMessage(m.chat, { react: { text: '💀', key: m.key }})
+  // ARREGLO: Pasamos el JID completo en mentions para que se pinte azul
+  await conn.reply(m.chat, texto, m, { mentions: [quien] })
 }
 
-handler.help = ['therian @user'];
-handler.tags = ['diversión'];
-handler.command = ['therians', 'therian'];
-
-export default handler;
+handler.help = ['adoptada @tag']
+handler.tags = ['diversion']
+handler.command = /^adoptada$/i
+export default handler
