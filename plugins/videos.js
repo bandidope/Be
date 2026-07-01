@@ -2,13 +2,23 @@ const CHICAS = [
   "https://files.evogb.win/hbkzO5.mp4",
   "https://files.evogb.win/enz3dO.mp4",
   "https://files.evogb.win/EGI45I.mp4",
-  "https://files.evogb.win/sDft7k.mp4"
+  "https://files.evogb.win/sDft7k.mp4",
+  "https://files.evogb.win/vnERiq.mp4",
+  "https://files.evogb.win/M3wCig.mp4",
+  "https://files.evogb.win/knTQU7.mp4"
+]
+
+// EDITA TUS LINKS AQUÍ 👇
+const LINKS = [
+  { url: 'https://chat.whatsapp.com/TU_LINK', name: '📢 Canal Oficial' },
+  { url: 'https://github.com/Elrebelde1/Nox-Bot-', name: '💻 GitHub Nox-Bot' },
+  { url: 'https://instagram.com/tu_user', name: '📸 Instagram' }
 ]
 
 let ultimo = -1
 
 let handler = async (m, { conn, usedPrefix, command }) => {
-    // Anti-repeat
+    // Anti-repeat: que no mande el mismo 2 veces
     let random;
     do {
         random = Math.floor(Math.random() * CHICAS.length)
@@ -17,14 +27,22 @@ let handler = async (m, { conn, usedPrefix, command }) => {
 
     let videoUrl = CHICAS[random]
 
+    // Caption con links
+    let caption = `🔥 *𝗧𝗥𝗘𝗡𝗗 𝗗𝗘 𝗧𝗜𝗞 𝗧𝗢𝗞*\n_Video ${random + 1}/${CHICAS.length}_\n\n`
+
+    if (LINKS.length) {
+      caption += `╭─ 🔗 *Links Importantes* ─╮\n`
+      LINKS.forEach(l => caption += `│ ${l.name}\n│ ${l.url}\n`)
+      caption += `╰───────────────────────╯`
+    }
+
     try {
         await m.react('🎥')
         await conn.sendMessage(m.chat, {
             video: { url: videoUrl },
-            caption: `🔥 *𝗧𝗥𝗘𝗡𝗗 𝗗𝗘 𝗧𝗜𝗞 𝗧𝗢𝗞*\n_Video ${random + 1}/${CHICAS.length}_`,
+            caption: caption.trim(),
             mimetype: 'video/mp4',
             fileName: 'tiktok.mp4',
-            // Botón pa mandar otro al toque
             buttons: [
                 { buttonId: `${usedPrefix + command}`, buttonText: { displayText: '🔄 Otro' }, type: 1 }
             ],
@@ -41,5 +59,5 @@ let handler = async (m, { conn, usedPrefix, command }) => {
 handler.help = ['chicas']
 handler.tags = ['internet', 'random']
 handler.command = /^(chicas)$/i
-handler.limit = true
+handler.limit = true // 15s cooldown
 export default handler
