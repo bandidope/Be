@@ -1,18 +1,22 @@
-let handler = async (m, { conn, mentionedJid }) => {
-  if (!mentionedJid?.[0]) return m.reply('Taggea a tu víctima: `.adoptado @user`')
+let handler = async (m, { conn, text, mentionedJid, quoted }) => {
+  // [FIX] Detecta: 1.Mencion azul 2.Respuesta 3.Texto @numero
+  let who = mentionedJid?.[0]
+   ? mentionedJid[0]
+    : quoted
+   ? quoted.sender
+    : text?.match(/@(\d+)/)?.[1] + '@s.whatsapp.net';
 
-  let quien = mentionedJid[0] // ej: 254417471316137@s.whatsapp.net
-  let numero = quien.split('@')[0] // ej: 254417471316137
+  if (!who) return m.reply(`*Taggea a tu víctima*\n\nEjemplo:.adoptado @user\nO responde a su msj +.adoptado`);
 
-  // ARREGLO: El @ va pegado al numero SIN el +
-  let texto = `@${numero} *ES/IS* *%* *ADOPTADO*\n_Sus padres se fueron x pañales 😞😂_`
+  let numero = who.split('@')[0];
 
-  await conn.sendMessage(m.chat, { react: { text: '💀', key: m.key }})
-  // ARREGLO: Pasamos el JID completo en mentions para que se pinte azul
-  await conn.reply(m.chat, texto, m, { mentions: [quien] })
+  let texto = `@${numero} *ES/IS* *%* *ADOPTADO*\n_Sus padres se fueron x pañales 😞😂_`;
+
+  await conn.sendMessage(m.chat, { react: { text: '💀', key: m.key }});
+  await conn.reply(m.chat, texto, m, { mentions: [who] });
 }
 
-handler.help = ['adoptada @tag']
-handler.tags = ['diversion']
-handler.command = /^adoptada$/i
-export default handler
+handler.help = ['adoptado @tag'];
+handler.tags = ['diversion'];
+handler.command = /^adoptado$/i;
+export default handler;
