@@ -1,73 +1,60 @@
-import os from 'os';
-import { execSync } from 'child_process';
+const os = require('os');
+const { execSync } = require('child_process');
 
 const formatBytes = (bytes, decimals = 2) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return '0 B';
     const k = 1024;
     const dm = decimals < 0? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' + sizes[i];
 };
 
-const getDiskSpace = () => {
-    try {
-        // FIX: Ahora agarra cualquier disco, no solo root/sda1
-        const stdout = execSync('df -h --total | tail -n 1').toString();
-        const [, size, used, available, usePercent ] = stdout.split(/\s+/);
-        return { size, used, available, usePercent };
-    } catch {
-        return null; // Si falla, que no crashee
-    }
-};
-
-const clockString = (ms) => {
-    let h = isNaN(ms)? '--' : Math.floor(ms / 3600000)
-    let m = isNaN(ms)? '--' : Math.floor(ms / 60000) % 60
-    let s = isNaN(ms)? '--' : Math.floor(ms / 1000) % 60
-    return [h, m, s].map(v => v.toString().padStart(2, 0)).join(':')
-}
-
 let handler = async (m, { conn }) => {
-    const totalMem = os.totalmem();
-    const freeMem = os.freem();
-    const usedMem = totalMem - freeMem;
-    const muptime = clockString(process.uptime() * 1000)
-    const hostname = os.hostname();
-    const platform = os.platform();
-    const arch = os.arch();
-    const nodeUsage = process.memoryUsage();
-    const diskSpace = getDiskSpace();
+    // Anti-crash: Si algo falla, el bot no se cae
+    try {
+        const totalMem = os.totalmem();
+        const freeMem = os.freem();
+        const usedMem = totalMem - freeMem;
+        const uptime = process.uptime() * 1000;
+        const h = Math.floor(uptime / 3600000);
+        const min = Math.floor(uptime / 60000) % 60;
+        const sec = Math.floor(uptime / 1000) % 60;
 
-    let txt = `✅ *ESTADO DEL SISTEMA*
+        // FIX: df compatible con Termux + VPS + Linux
+        let disk = 'N/A';
+        try {
+            const df = execSync('df -h / | tail -1').toString().trim().split(/\s+/);
+            disk = `${df[1]} | Usado: ${df[2]} | ${df[4]}`;
+        } catch {}
 
-🚩 *Host:* ${hostname}
-🏆 *Plataforma:* ${platform} ${arch}
-🕒 *Uptime:* ${muptime}
+        const txt = `*✅ ESTADO DEL SISTEMA*
 
-💾 *RAM Servidor:*
-→ Total: ${formatBytes(totalMem)}
-→ Libre: ${formatBytes(freeMem)}
-→ Usada: ${formatBytes(usedMem)}
+*🚩 Host:* ${os.hostname()}
+*🏆 OS:* ${os.platform()} ${os.arch()}
+*🕒 Uptime:* ${h}h ${min}m ${sec}s
 
-🪴 *RAM NodeJS:*
-→ Heap Usado: ${formatBytes(nodeUsage.heapUsed)} / ${formatBytes(nodeUsage.heapTotal)}
-→ RSS: ${formatBytes(nodeUsage.rss)}`
+*💾 RAM Servidor:*
+> Total: ${formatBytes(totalMem)}
+> Libre: ${formatBytes(freeMem)}
+> Usada: ${formatBytes(usedMem)}
 
-    if (diskSpace) {
-        txt += `
+*🪴 RAM NodeJS:*
+> Heap: ${formatBytes(process.memoryUsage().heapUsed)} / ${formatBytes(process.memoryUsage().heapTotal)}
 
-☁️ *Disco:*
-→ Total: ${diskSpace.size} | Usado: ${diskSpace.used} | ${diskSpace.usePercent}`
+*☁️ Disco:* ${disk}`;
+
+        await m.reply(txt);
+
+    } catch (e) {
+        await m.reply('❌ Error al obtener datos: ' + e.message);
     }
-
-    await conn.reply(m.chat, txt, m) // <- FIX: Quité rcanal
 };
 
-handler.help = ['sistema'];
+handler.command = ['sistema', 'system', 'status', 'ping'];
 handler.tags = ['info'];
-handler.command = ['system', 'sistema', 'ping', 'status'];
-handler.register = false // <- FIX: Pa que no lo bloquee Be
-handler.limit = false
+handler.help = ['sistema'];
+handler.register = false; // CLAVE PA BE
+handler.limit = false;
 
-export default handler
+module.exports = handler;
