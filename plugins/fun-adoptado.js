@@ -1,23 +1,16 @@
+let handler = async (m, { conn, mentionedJid }) => {
+  if (!mentionedJid?.[0]) return m.reply('Taggea a tu víctima: `.adoptado @user`')
 
-let handler = async (m, { conn, text }) => {
-    // Verificar si se ha proporcionado un usuario
-    if (!text) {
-        return conn.sendMessage(m.chat, { text: "Por favor, menciona a un usuario. Ejemplo: .adoptado @usuario" }, { quoted: m });
-    }
+  let quien = mentionedJid[0]
+  let numero = quien.split('@')[0]
 
-    let userMentioned = text.split('@')[1]; // Extraer el ID del usuario mencionado
+  let texto = `*@+${numero}* *ES/IS* *%* *ADOPTADO*_\n_Sus padres se fueron x pañales 😞😂_`
 
-    // Obtener el nombre del usuario mencionado usando conn.getName()
-    let mentionedName = await conn.getName(userMentioned + '@s.whatsapp.net');
-
-    let adoptedMessage = `*@${mentionedName}* *ES/IS* *%* *ADOPTADO*_ _Sus padres se fueron x pañales 😞😂_`;
-
-    // Enviamos el mensaje al chat
-    await conn.sendMessage(m.chat, { text: adoptedMessage }, { quoted: m });
+  await conn.sendMessage(m.chat, { react: { text: '💀', key: m.key }})
+  await conn.reply(m.chat, texto, m, { mentions: [quien] })
 }
 
-handler.help = ['adoptado @usuario'];
-handler.tags = ['diversión'];
-handler.command = ['adoptado'];
-
-export default handler;
+handler.help = ['adoptado @tag']
+handler.tags = ['diversion']
+handler.command = /^adoptado$/i
+export default handler
