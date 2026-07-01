@@ -8,13 +8,18 @@ let handler = async (m, { conn }) => {
 
   await m.reply('⏳ Tienen *2 minutos* para votar...')
 
-  // [2. ESPERA 2 MINUTOS = 120000 ms]
+  // [2. AVISO A LOS 1 MINUTO]
+  setTimeout(async () => {
+    await conn.reply(m.chat, '⏳ *Queda 1 minuto* para votar rápido! 🎲', m)
+  }, 60000) // 60000ms = 1 minuto
+
+  // [3. ESPERA LOS 2 MINUTOS TOTALES]
   await new Promise(resolve => setTimeout(resolve, 120000))
 
-  // [3. TIRA EL DADO DE VERDAD]
+  // [4. TIRA EL DADO DE VERDAD]
   let numero = Math.floor(Math.random() * 6) + 1
   
-  // [4. REACCIONA Y MANDA RESULTADO]
+  // [5. REACCIONA Y MANDA RESULTADO]
   await conn.sendMessage(m.chat, {
     react: { 
       text: '🎲', 
@@ -32,5 +37,5 @@ let handler = async (m, { conn }) => {
 
 handler.help = ['dado']
 handler.tags = ['diversion']
-handler.command = /^(dado)$/i
+handler.command = /^(dado|dice|roll)$/i
 export default handler
