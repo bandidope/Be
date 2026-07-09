@@ -10,91 +10,85 @@ import { spawn } from 'child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(__dirname);
-const { name, description, author, version } = require(join(__dirname, './package.json'));
-const { say } = cfonts;
+const { name, version } = require(join(__dirname, './package.json'));
 const rl = createInterface(process.stdin, process.stdout);
 
-function verify() {
-  const dirs = ['tmp', 'Sesiones/Subbots', 'Sesiones/Principal'];
-  for (const dir of dirs) {
-    if (typeof dir === 'string' && dir.trim()!== '') {
-      if (!existsSync(dir)) {
-        mkdirSync(dir, { recursive: true });
-      }
-    } else {
-      console.warn('Ruta inválida o no definida:', dir);
+const inicializarEntorno = () => {
+  const carpetas = ['tmp', 'Sesiones/Subbots', 'Sesiones/Principal'];
+  carpetas.forEach(dir => {
+    if (dir?.trim() && !existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
     }
-  }
-}
-verify();
+  });
+};
 
-// Diseño para "𝙏𝙝𝙚 𝙆𝙞𝙣𝙜𝙨 𝘽𝙤𝙩 👾"
-say('Benja', {
-  font: 'block',
-  align: 'center',
-  colors: ['red', 'white'],
-  background: 'black'
-});
+const mostrarBanner = () => {
+  cfonts.say('nox bot', {
+    font: 'block',
+    align: 'center',
+    colors: ['blue', 'white'],
+    background: 'black'
+  });
 
-say(`Developed By • 𝙏𝙝𝙚 𝙆𝙞𝙣𝙜𝙨 𝘽𝙤𝙩 👾`, { // <- QUITE EL '
-  font: 'console',
-  align: 'center',
-  colors: ['magenta']
-});
+  cfonts.say('Developed By • Nox Bot MD', {
+    font: 'console',
+    align: 'center',
+    colors: ['cyan']
+  });
+};
 
-let isRunning = false;
-let child;
+let ejecucionActiva = false;
+let procesoHijo;
 
-function start(file) {
-  if (isRunning) return;
-  isRunning = true;
+const ejecutarProceso = (archivo) => {
+  if (ejecucionActiva) return;
+  ejecucionActiva = true;
 
-  const args = [join(__dirname, file),...process.argv.slice(2)];
-  child = spawn('node', args, { stdio: ['inherit', 'inherit', 'inherit', 'ipc'] });
+  const rutaArchivo = join(__dirname, archivo);
+  const argumentos = [rutaArchivo, ...process.argv.slice(2)];
 
-  child.on('message', data => {
-    switch (data) {
-      case 'reset':
-        child.kill();
-        isRunning = false;
-        start(file);
-        break;
-      case 'uptime':
-        child.send(process.uptime());
-        break;
+  procesoHijo = spawn('node', argumentos, { stdio: ['inherit', 'inherit', 'inherit', 'ipc'] });
+
+  procesoHijo.on('message', codigo => {
+    if (codigo === 'reset') {
+      procesoHijo.kill();
+      ejecucionActiva = false;
+      ejecutarProceso(archivo);
+    } else if (codigo === 'uptime') {
+      procesoHijo.send(process.uptime());
     }
   });
 
-  child.on('exit', (code) => {
-    isRunning = false;
-    console.error('🚩 Error :\n', code);
+  procesoHijo.on('exit', estado => {
+    ejecucionActiva = false;
+    console.error('🚩 Error :\n', estado);
     process.exit();
   });
 
-  const opts = yargs(process.argv.slice(2)).exitProcess(false).parse();
-  if (!opts['test']) {
-    if (!rl.listenerCount('line')) {
-      rl.on('line', line => {
-        if (child && child.connected) {
-          child.send(line.trim());
-        }
-      });
-    }
+  const opciones = yargs(process.argv.slice(2)).exitProcess(false).parse();
+  if (!opciones['test'] && !rl.listenerCount('line')) {
+    rl.on('line', entrada => {
+      if (procesoHijo?.connected) {
+        procesoHijo.send(entrada.trim());
+      }
+    });
   }
 
-  watchFile(args[0], () => {
-    unwatchFile(args[0]);
-    if (child) child.kill();
-    isRunning = false;
-    start(file);
+  watchFile(argumentos[0], () => {
+    unwatchFile(argumentos[0]);
+    if (procesoHijo) procesoHijo.kill();
+    ejecucionActiva = false;
+    ejecutarProceso(archivo);
   });
-}
+};
 
-process.on('warning', (warning) => {
-  if (warning.name === 'MaxListenersExceededWarning') {
+process.on('warning', alerta => {
+  if (alerta.name === 'MaxListenersExceededWarning') {
     console.warn('🚩 Se excedió el límite de Listeners en :');
-    console.warn(warning.stack);
+    console.warn(alerta.stack);
   }
 });
 
-start('main.js');
+inicializarEntorno();
+mostrarBanner();
+ejecutarProceso('main.js');
